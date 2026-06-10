@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echo — dashboard</title>
+<link rel="stylesheet" href="echo.css">
+<script src="qrcode.js"></script>
+</head>
+<body>
+<script src="icons.js"></script>
+<div class="wrap wide">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="word">echo</span>
+    </a>
+    <span class="links">
+      <span class="pill" style="margin:0"><svg class="ic"><use href="#i-user"/></svg> <b id="navUser"></b></span>
+      <a class="link" href="#" onclick="logout(); return false"><svg class="ic"><use href="#i-logout"/></svg> Sign out</a>
+    </span>
+  </nav>
+
+  <div class="banner warn" id="codesBanner" style="display:none">
+    <svg class="ic" style="flex:none; margin-top:2px"><use href="#i-alert"/></svg>
+    <div><b>No recovery codes yet.</b> If you lose your phone, you lose your account.
+    Generate codes now and keep them somewhere safe.
+    <a class="text" href="#" onclick="generateCodes(); return false">Generate recovery codes</a></div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="n" id="kDevices">–</div><div class="l">Enrolled devices</div></div>
+    <div class="kpi"><div class="n" id="kCodes">–</div><div class="l">Recovery codes left</div></div>
+    <div class="kpi"><div class="n" id="kLogins">–</div><div class="l">Sign-ins recorded</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <h2><svg class="ic"><use href="#i-phone"/></svg> Devices</h2>
+        <button class="btn small ghost" onclick="addDevice()"><svg class="ic"><use href="#i-plus"/></svg> Add device</button>
+      </div>
+      <p class="sub">Phones that can approve your sign-ins. Changed phones?
+         Add the new one, then revoke the old.</p>
+      <ul class="list" id="deviceList"></ul>
+      <div id="addDeviceBox" style="display:none">
+        <div class="divider">scan with the new phone</div>
+        <div class="qr" id="deviceQr"></div>
+        <div class="center"><span class="pill mono" id="deviceLink"></span></div>
+        <div class="status" id="addStatus">Waiting for the new phone… this link expires in 10 minutes.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2><svg class="ic"><use href="#i-key"/></svg> Recovery codes</h2>
+        <button class="btn small ghost" onclick="generateCodes()"><svg class="ic"><use href="#i-refresh"/></svg> <span id="genLabel">Generate</span></button>
+      </div>
+      <p class="sub">Your way back in without a phone. Each code works once.
+         Regenerating replaces all old codes.</p>
+      <div class="status" id="codesStatus" style="text-align:left; margin:0"></div>
+      <div id="codesBox" style="display:none">
+        <div class="codes" id="codesGrid"></div>
+        <div class="banner info" style="margin:10px 0 0">
+          <svg class="ic" style="flex:none; margin-top:2px"><use href="#i-alert"/></svg>
+          <div>These are shown <b>only once</b>. Save them now — print them or store them in a password manager.</div>
+        </div>
+        <div class="row">
+          <button class="btn small ghost" onclick="copyCodes()"><svg class="ic"><use href="#i-copy"/></svg> Copy all</button>
+          <button class="btn small ghost" onclick="downloadCodes()"><svg class="ic"><use href="#i-download"/></svg> Download .txt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card span2">
+      <h2><svg class="ic"><use href="#i-activity"/></svg> Recent activity</h2>
+      <p class="sub">Every sign-in attempt against your account, successful or not.</p>
+      <ul class="list" id="activityList"></ul>
+    </div>
+
+    <div class="card span2">
+      <h2><svg class="ic"><use href="#i-shield-check"/></svg> System security status</h2>
+      <p class="sub">Why this account has no password to steal.</p>
+      <ul class="list">
+        <li><span class="badge ok"><svg class="ic"><use href="#i-check"/></svg> active</span>
+            <div class="grow"><div class="t1">One-time sound codes</div>
+            <div class="t2">Every sign-in plays a unique random 96-bit code — single-use, 30-second expiry. Recording it is useless.</div></div></li>
+        <li><span class="badge ok"><svg class="ic"><use href="#i-check"/></svg> active</span>
+            <div class="grow"><div class="t1">Device-bound keys</div>
+            <div class="t2">ECDSA P-256 private keys are generated non-extractable on your phone and physically cannot be copied off it.</div></div></li>
+        <li><span class="badge ok"><svg class="ic"><use href="#i-check"/></svg> active</span>
+            <div class="grow"><div class="t1">User consent</div>
+            <div class="t2">Your phone never signs silently — every sign-in shows an approve / deny prompt.</div></div></li>
+        <li><span class="badge ok"><svg class="ic"><use href="#i-check"/></svg> active</span>
+            <div class="grow"><div class="t1">Rate-limited recovery</div>
+            <div class="t2">Recovery codes are stored only as hashes; five failed attempts locks recovery for 15 minutes.</div></div></li>
+        <li><span class="badge warn"><svg class="ic"><use href="#i-alert"/></svg> known limit</span>
+            <div class="grow"><div class="t1">Relay attacks</div>
+            <div class="t2">An attacker streaming live audio to a remote accomplice's phone is mitigated by consent prompts and short range, not yet by distance bounding.</div></div></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let lastCodes = [], pollTimer = null, me = null;
+
+async function load() {
+  const r = await fetch('/api/me');
+  if (!r.ok) { location.href = 'login.html'; return; }
+  me = await r.json();
+  $('navUser').textContent = me.username;
+  $('kDevices').textContent = me.devices.length;
+  $('kCodes').textContent = me.recoveryUnused;
+  $('kLogins').textContent = me.recentLogins.length;
+  $('codesBanner').style.display = me.recoveryUnused === 0 ? '' : 'none';
+  $('genLabel').textContent = me.recoveryUnused === 0 ? 'Generate' : 'Regenerate';
+  $('codesStatus').textContent = me.recoveryUnused > 0
+    ? me.recoveryUnused + ' unused codes on file (hashes only — not viewable).' : '';
+  renderDevices();
+  renderActivity();
+}
+
+function renderDevices() {
+  $('deviceList').innerHTML = me.devices.map(d => `
+    <li>
+      <span class="badge info"><svg class="ic"><use href="#i-phone"/></svg></span>
+      <div class="grow">
+        <div class="t1">${esc(d.name)}</div>
+        <div class="t2">enrolled ${new Date(d.created_at).toLocaleDateString()} · id ${d.id}</div>
+      </div>
+      <button class="btn small red" onclick="revoke('${d.id}', '${esc(d.name)}')">Revoke</button>
+    </li>`).join('') || '<li><div class="t2">No devices — add one before signing out!</div></li>';
+}
+
+function renderActivity() {
+  $('activityList').innerHTML = me.recentLogins.map(l => `
+    <li>
+      <span class="badge ${l.ok ? 'ok' : 'bad'}">
+        <svg class="ic"><use href="#i-${l.ok ? 'check' : 'x'}"/></svg> ${l.ok ? 'success' : 'failed'}
+      </span>
+      <div class="grow">
+        <div class="t1">${l.method === 'sound' ? 'Sound sign-in' : 'Recovery code sign-in'}
+          ${l.device_name ? '· ' + esc(l.device_name) : ''}</div>
+        <div class="t2">${l.detail ? esc(l.detail) + ' · ' : ''}${new Date(l.created_at).toLocaleString()}</div>
+      </div>
+    </li>`).join('') || '<li><div class="t2">No activity yet.</div></li>';
+}
+
+async function revoke(id, name) {
+  if (!confirm('Revoke "' + name + '"? It will no longer be able to approve sign-ins.')) return;
+  const r = await fetch('/api/device/revoke', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId: id })
+  });
+  if (r.ok) load();
+}
+
+async function addDevice() {
+  const r = await fetch('/api/device/token', { method: 'POST' });
+  if (!r.ok) return;
+  const data = await r.json();
+  const url = location.origin + '/phone.html?token=' + data.enrollToken;
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  $('deviceQr').innerHTML = qr.createSvgTag({ scalable: true, margin: 2 });
+  $('deviceLink').textContent = url.replace(/^https?:\/\//, '');
+  $('addDeviceBox').style.display = '';
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    const s = await fetch('/api/signup/status?token=' + data.enrollToken).then(x => x.json()).catch(() => null);
+    if (s && s.enrolled) {
+      clearInterval(pollTimer);
+      $('addDeviceBox').style.display = 'none';
+      load();
+    }
+  }, 2000);
+}
+
+async function generateCodes() {
+  if (me && me.recoveryUnused > 0 &&
+      !confirm('Regenerating replaces ALL existing codes. Continue?')) return;
+  const r = await fetch('/api/recovery/generate', { method: 'POST' });
+  if (!r.ok) return;
+  lastCodes = (await r.json()).codes;
+  $('codesGrid').innerHTML = lastCodes.map(c => '<div>' + c + '</div>').join('');
+  $('codesBox').style.display = '';
+  $('codesBanner').style.display = 'none';
+  $('codesStatus').textContent = '';
+  fetch('/api/me').then(x => x.json()).then(m => { me = m; $('kCodes').textContent = m.recoveryUnused; $('genLabel').textContent = 'Regenerate'; });
+}
+
+function copyCodes() { navigator.clipboard.writeText(codesText()); }
+function downloadCodes() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([codesText()], { type: 'text/plain' }));
+  a.download = 'echo-recovery-codes.txt';
+  a.click();
+}
+const codesText = () => 'Echo recovery codes for ' + me.username + ' — each works once\n\n' + lastCodes.join('\n') + '\n';
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+async function logout() {
+  await fetch('/api/logout', { method: 'POST' });
+  location.href = 'index.html';
+}
+load();
+</script>
+</body>
+</html>

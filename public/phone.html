@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echo Key</title>
+<link rel="stylesheet" href="echo.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2e5cf6">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="ggwave.js"></script>
+</head>
+<body>
+<script src="icons.js"></script>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="phone.html">
+      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="word">echo <span style="color:var(--dim); font-weight:500">key</span></span>
+    </a>
+    <span class="links"><span class="badge info" id="installBadge" style="display:none; cursor:pointer">Install app</span></span>
+  </nav>
+
+  <div class="card center" id="enrollCard" style="display:none">
+    <div class="bigico"><svg class="ic lg"><use href="#i-key"/></svg></div>
+    <h2 style="justify-content:center">Make this device your key</h2>
+    <p class="sub">A private key will be generated on this device.
+       It physically cannot be copied off it.</p>
+    <label for="deviceName" style="text-align:left">Device name</label>
+    <input type="text" id="deviceName" placeholder="e.g. Kwame's phone">
+    <button class="btn" id="btnEnroll" onclick="enroll()">Make this my key</button>
+    <div class="status" id="enrollStatus"></div>
+  </div>
+
+  <div class="card center" id="keyCard" style="display:none">
+    <div class="wave big" id="listenWave" style="justify-content:center; display:inline-flex"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h2 style="justify-content:center" id="keyTitle">Ready</h2>
+    <p class="sub" style="margin-bottom:4px">
+      <span class="pill"><svg class="ic"><use href="#i-user"/></svg> <b id="whoami"></b></span>
+      <span class="pill"><svg class="ic"><use href="#i-phone"/></svg> <span id="devname"></span></span>
+    </p>
+    <button class="btn green" id="btnListen" onclick="toggleListen()">
+      <svg class="ic"><use href="#i-mic"/></svg> <span id="listenLabel">Start listening</span>
+    </button>
+    <div class="status" id="listenStatus">Keep this page open near the computer you're signing in on.</div>
+    <details>
+      <summary>No microphone? Enter the code manually</summary>
+      <input type="text" id="manualNonce" class="mono" placeholder="code from the laptop's debug log" style="margin-top:8px">
+      <button class="btn ghost" onclick="manualApprove()">Continue</button>
+    </details>
+  </div>
+
+  <div class="card approve-card center" id="approveCard" style="display:none">
+    <div class="bigico"><svg class="ic lg"><use href="#i-bell"/></svg></div>
+    <h2 style="justify-content:center">Sign-in request</h2>
+    <div class="who" id="approveWho"></div>
+    <p class="sub">A computer near you wants to sign in to your account.
+       Only approve if this is you.</p>
+    <div class="row">
+      <button class="btn red" onclick="deny()"><svg class="ic"><use href="#i-x"/></svg> Deny</button>
+      <button class="btn green" onclick="approve()"><svg class="ic"><use href="#i-check"/></svg> Approve</button>
+    </div>
+  </div>
+
+  <div class="card" id="historyCard" style="display:none">
+    <h2 style="font-size:1rem"><svg class="ic"><use href="#i-activity"/></svg> Recent activity on this device</h2>
+    <ul class="list" id="history"></ul>
+  </div>
+
+  <div class="card center" id="emptyCard" style="display:none">
+    <h2 style="justify-content:center">This device isn't a key yet</h2>
+    <p class="sub">Create an account on your computer — it will show a QR code that sets up this phone.
+       Already have an account? Add this device from your dashboard.</p>
+    <button class="btn ghost" onclick="location.href='signup.html'">Create an account</button>
+  </div>
+</div>
+
+<script>
+let ggwave = null, context = null, instance = null;
+let mediaStream = null, recorder = null, stream = null, listening = false;
+let pendingNonce = null, lastNonce = null, deferredInstall = null;
+
+const $ = id => document.getElementById(id);
+
+if (typeof ggwave_factory !== 'undefined') ggwave_factory().then(g => { ggwave = g; });
+
+// PWA install + service worker
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstall = e;
+  $('installBadge').style.display = '';
+  $('installBadge').onclick = () => { deferredInstall.prompt(); };
+});
+
+// ---------- IndexedDB key storage
+function idb() {
+  return new Promise((res, rej) => {
+    const open = indexedDB.open('echo-keys', 1);
+    open.onupgradeneeded = () => open.result.createObjectStore('kv');
+    open.onsuccess = () => res(open.result);
+    open.onerror = () => rej(open.error);
+  });
+}
+async function kvSet(k, v) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('kv', 'readwrite');
+    tx.objectStore('kv').put(v, k);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+async function kvGet(k) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const rq = db.transaction('kv', 'readonly').objectStore('kv').get(k);
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+  });
+}
+
+// ---------- view routing
+async function route() {
+  const token = new URLSearchParams(location.search).get('token');
+  const username = await kvGet('username');
+  if (token) {
+    $('enrollCard').style.display = '';
+    const guess = /android/i.test(navigator.userAgent) ? 'Android phone'
+                : /iphone|ipad/i.test(navigator.userAgent) ? 'iPhone' : 'This device';
+    $('deviceName').value = guess;
+    if (username) $('enrollStatus').textContent =
+      'Note: this device already holds a key for "' + username + '" — enrolling replaces it here.';
+    return;
+  }
+  if (username) {
+    $('keyCard').style.display = '';
+    $('whoami').textContent = username;
+    $('devname').textContent = await kvGet('deviceName') || 'device';
+    renderHistory();
+  } else {
+    $('emptyCard').style.display = '';
+  }
+}
+
+// ---------- enrollment
+async function enroll() {
+  const token = new URLSearchParams(location.search).get('token');
+  $('btnEnroll').disabled = true;
+  const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
+  const publicKeyJwk = await crypto.subtle.exportKey('jwk', keys.publicKey);
+  const deviceName = $('deviceName').value.trim() || 'phone';
+  const r = await fetch('/api/enroll', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enrollToken: token, deviceName, publicKeyJwk })
+  }).catch(() => null);
+  if (!r || !r.ok) {
+    const err = r ? (await r.json().catch(() => ({}))).error : 'Server unreachable';
+    $('enrollStatus').className = 'status bad';
+    $('enrollStatus').textContent = err || 'Enrollment failed';
+    $('btnEnroll').disabled = false;
+    return;
+  }
+  const data = await r.json();
+  await kvSet('privateKey', keys.privateKey);
+  await kvSet('deviceId', data.deviceId);
+  await kvSet('username', data.username);
+  await kvSet('deviceName', deviceName);
+  if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+  $('enrollCard').style.display = 'none';
+  history.replaceState(null, '', 'phone.html');
+  route();
+}
+
+// ---------- audio
+function ensureAudio() {
+  if (!context) {
+    context = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    const p = ggwave.getDefaultParameters();
+    p.sampleRateInp = context.sampleRate;
+    p.sampleRateOut = context.sampleRate;
+    instance = ggwave.init(p);
+  }
+  if (context.state === 'suspended') context.resume();
+}
+function convertTypedArray(src, type) {
+  const buffer = new ArrayBuffer(src.byteLength);
+  new src.constructor(buffer).set(src);
+  return new type(buffer);
+}
+
+function toggleListen() { listening ? stopListen() : startListen(); }
+
+function startListen() {
+  if (!ggwave) { setStatus('Sound library not loaded', 'bad'); return; }
+  ensureAudio();
+  navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
+  }).then(s => {
+    stream = s;
+    mediaStream = context.createMediaStreamSource(s);
+    recorder = context.createScriptProcessor(1024, 1, 1);
+    recorder.onaudioprocess = e => {
+      const samples = new Float32Array(e.inputBuffer.getChannelData(0));
+      const res = ggwave.decode(instance, convertTypedArray(samples, Int8Array));
+      if (res && res.length > 0) {
+        const nonce = new TextDecoder('utf-8').decode(res);
+        if (nonce === lastNonce) return;
+        lastNonce = nonce;
+        heard(nonce);
+      }
+    };
+    mediaStream.connect(recorder);
+    recorder.connect(context.destination);
+    listening = true;
+    $('listenWave').classList.add('anim');
+    $('listenLabel').textContent = 'Stop listening';
+    $('btnListen').className = 'btn red';
+    $('keyTitle').textContent = 'Listening';
+    setStatus('Waiting for a sign-in sound nearby');
+  }).catch(err => {
+    setStatus('Microphone blocked: ' + err.name + ' — page must be https or localhost', 'bad');
+  });
+}
+
+function stopListen() {
+  if (recorder) { recorder.disconnect(); recorder = null; }
+  if (mediaStream) { mediaStream.disconnect(); mediaStream = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  listening = false;
+  $('listenWave').classList.remove('anim');
+  $('listenLabel').textContent = 'Start listening';
+  $('btnListen').className = 'btn green';
+  $('keyTitle').textContent = 'Ready';
+  setStatus('Keep this page open near the computer you\'re signing in on.');
+}
+
+function setStatus(msg, cls) {
+  $('listenStatus').className = 'status' + (cls ? ' ' + cls : '');
+  $('listenStatus').textContent = msg;
+}
+
+// ---------- consent + signing
+async function heard(nonce) {
+  pendingNonce = nonce;
+  if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+  $('approveWho').textContent = await kvGet('username');
+  $('keyCard').style.display = 'none';
+  $('approveCard').style.display = '';
+}
+
+function manualApprove() {
+  const n = $('manualNonce').value.trim();
+  if (n) heard(n);
+}
+
+async function approve() {
+  const nonce = pendingNonce;
+  closeApprove();
+  const privateKey = await kvGet('privateKey');
+  const deviceId = await kvGet('deviceId');
+  const message = `echo-v1|${nonce}|${deviceId}`;
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, privateKey,
+    new TextEncoder().encode(message));
+  const signature = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const r = await fetch('/api/login/verify', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nonce, deviceId, signature })
+  }).catch(() => null);
+  const ok = r && r.ok;
+  const err = ok ? null : (r ? (await r.json().catch(() => ({}))).error : 'server unreachable');
+  setStatus(ok ? 'Approved — the computer is signing in' : 'Rejected: ' + err, ok ? 'ok' : 'bad');
+  if (ok && navigator.vibrate) navigator.vibrate(80);
+  addHistory(ok ? 'approved' : 'failed: ' + err, ok);
+}
+
+function deny() {
+  closeApprove();
+  setStatus('Request denied', 'bad');
+  addHistory('denied', false);
+}
+
+function closeApprove() {
+  $('approveCard').style.display = 'none';
+  $('keyCard').style.display = '';
+}
+
+// ---------- local history
+function addHistory(result, ok) {
+  const h = JSON.parse(localStorage.getItem('echo-history') || '[]');
+  h.unshift({ t: Date.now(), result, ok });
+  localStorage.setItem('echo-history', JSON.stringify(h.slice(0, 20)));
+  renderHistory();
+}
+function renderHistory() {
+  const h = JSON.parse(localStorage.getItem('echo-history') || '[]');
+  if (!h.length) return;
+  $('historyCard').style.display = '';
+  $('history').innerHTML = h.map(x => `
+    <li>
+      <span class="badge ${x.ok ? 'ok' : 'bad'}">
+        <svg class="ic"><use href="#i-${x.ok ? 'check' : 'x'}"/></svg>
+      </span>
+      <div class="grow"><div class="t1">Sign-in ${x.result}</div>
+      <div class="t2">${new Date(x.t).toLocaleString()}</div></div>
+    </li>`).join('');
+}
+
+route();
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# SQLite database — contains enrolled user credentials and private session tokens
+echo.db
+echo.db-shm
+echo.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# Environment variables — never commit secrets
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+ehthumbs.db
+
+# Build artifacts / temporary
+coverage/
+dist/

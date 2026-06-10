@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echo — create account</title>
+<link rel="stylesheet" href="echo.css">
+<script src="qrcode.js"></script>
+</head>
+<body>
+<script src="icons.js"></script>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="word">echo</span>
+    </a>
+    <span class="links"><a class="link" href="login.html">Sign in</a></span>
+  </nav>
+
+  <div class="dots"><i id="d1" class="on"></i><i id="d2"></i><i id="d3"></i></div>
+
+  <div class="card" id="step1">
+    <h2>Choose your username</h2>
+    <p class="sub">This is all you'll ever type to sign in. Your phone becomes your key in the next step.</p>
+    <label for="username">Username</label>
+    <input type="text" id="username" placeholder="e.g. kwame.a" autocomplete="off" spellcheck="false"
+           oninput="checkName(this.value)" onkeydown="if(event.key==='Enter')signup()">
+    <div class="hint" id="nameHint"></div>
+    <button class="btn" id="btnNext" onclick="signup()">Continue <svg class="ic"><use href="#i-arrow-right"/></svg></button>
+  </div>
+
+  <div class="card" id="step2" style="display:none">
+    <h2><svg class="ic"><use href="#i-phone"/></svg> Add your phone</h2>
+    <p class="sub">Scan with your phone's camera, then tap <b>Make this my key</b>.
+       The link expires in 10 minutes.</p>
+    <div class="qr" id="qrBox"></div>
+    <div class="center"><span class="pill mono" id="enrollLink"></span></div>
+    <div class="status" id="waitStatus">
+      <span class="wave anim" style="height:12px"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      &nbsp;Waiting for your phone…
+    </div>
+    <div class="divider">testing on one machine?</div>
+    <button class="btn ghost" onclick="window.open(enrollUrl,'_blank')">Enroll this device instead (dev)</button>
+  </div>
+
+  <div class="card center" id="step3" style="display:none">
+    <div class="bigico"><svg class="ic lg"><use href="#i-check"/></svg></div>
+    <h2 style="justify-content:center">You're all set, <span id="doneName"></span></h2>
+    <p class="sub">Your phone is now your key. One last thing after you sign in:
+       generate your <b>recovery codes</b> from the dashboard — they're your way
+       back in if your phone is lost or replaced.</p>
+    <button class="btn" onclick="location.href='login.html'">Sign in with Echo</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let enrollUrl = null, pollTimer = null;
+
+function checkName(v) {
+  const ok = /^[a-z0-9_.-]{2,32}$/.test(v.trim().toLowerCase());
+  const h = $('nameHint');
+  if (!v.trim()) { h.textContent = ''; h.className = 'hint'; return; }
+  h.textContent = ok ? 'Looks good' : '2–32 characters: letters, numbers, _ . -';
+  h.className = ok ? 'hint ok' : 'hint bad';
+}
+
+async function signup() {
+  const username = $('username').value.trim().toLowerCase();
+  if (!username) return;
+  $('btnNext').disabled = true;
+  const r = await fetch('/api/signup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username })
+  }).catch(() => null);
+  if (!r || !r.ok) {
+    const err = r ? (await r.json().catch(() => ({}))).error : 'Server unreachable — is it running?';
+    $('nameHint').textContent = err || 'Signup failed';
+    $('nameHint').className = 'hint bad';
+    $('btnNext').disabled = false;
+    return;
+  }
+  const data = await r.json();
+  enrollUrl = location.origin + '/phone.html?token=' + data.enrollToken;
+  $('doneName').textContent = data.username;
+
+  const qr = qrcode(0, 'M');
+  qr.addData(enrollUrl);
+  qr.make();
+  $('qrBox').innerHTML = qr.createSvgTag({ scalable: true, margin: 2 });
+  $('enrollLink').textContent = enrollUrl.replace(/^https?:\/\//, '');
+
+  $('step1').style.display = 'none';
+  $('step2').style.display = '';
+  $('d2').className = 'on';
+  poll(data.enrollToken);
+}
+
+function poll(token) {
+  pollTimer = setInterval(async () => {
+    const r = await fetch('/api/signup/status?token=' + token).catch(() => null);
+    if (!r || !r.ok) return;
+    const s = await r.json();
+    if (s.enrolled) {
+      clearInterval(pollTimer);
+      $('step2').style.display = 'none';
+      $('step3').style.display = '';
+      $('d3').className = 'on';
+    } else if (s.expired) {
+      clearInterval(pollTimer);
+      $('waitStatus').className = 'status bad';
+      $('waitStatus').textContent = 'Link expired — refresh to start again.';
+    }
+  }, 2000);
+}
+</script>
+</body>
+</html>

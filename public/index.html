@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echo — passwordless sign-in over sound</title>
+<link rel="stylesheet" href="echo.css">
+</head>
+<body>
+<script src="icons.js"></script>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="word">echo</span>
+    </a>
+    <span class="links">
+      <a class="link" href="login.html">Sign in</a>
+      <a class="link primary" href="signup.html">Create account</a>
+    </span>
+  </nav>
+
+  <div class="hero">
+    <div class="wave big anim" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h1>Sign in with <em>sound</em>.<br>No passwords. Ever.</h1>
+    <p>Your laptop plays an inaudible one-time code. Your phone hears it,
+       asks for your approval, and signs you in. Nothing to type, nothing to
+       phish, nothing to leak.</p>
+    <div class="cta">
+      <button class="btn" onclick="location.href='signup.html'">Get started</button>
+      <button class="btn ghost" onclick="location.href='login.html'">Sign in</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>How it works</h2>
+    <div class="feature">
+      <div class="fico"><svg class="ic lg"><use href="#i-volume"/></svg></div>
+      <div><b>Inaudible handshake</b>
+      <span>The sign-in page plays a single-use cryptographic code at 18–20 kHz — above human hearing, well within your phone's.</span></div>
+    </div>
+    <div class="feature">
+      <div class="fico"><svg class="ic lg"><use href="#i-phone"/></svg></div>
+      <div><b>Your phone is the key</b>
+      <span>A private key generated on your phone — and unable to leave it — signs the code. You approve every sign-in.</span></div>
+    </div>
+    <div class="feature">
+      <div class="fico"><svg class="ic lg"><use href="#i-shield-check"/></svg></div>
+      <div><b>Replay-proof by design</b>
+      <span>Every sign-in plays a different sound. Each code is random, dies on first use, and expires in 30 seconds — a recording is worthless.</span></div>
+    </div>
+    <div class="feature">
+      <div class="fico"><svg class="ic lg"><use href="#i-ruler"/></svg></div>
+      <div><b>Proximity is the point</b>
+      <span>Ultrasound carries about two metres. If your phone can hear the laptop, you are standing at it — that is the proof.</span></div>
+    </div>
+  </div>
+
+  <div class="status">CY384 research artefact · Stemi Security Solutions scenario</div>
+</div>
+</body>
+</html>

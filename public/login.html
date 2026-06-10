@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echo — sign in</title>
+<link rel="stylesheet" href="echo.css">
+<script src="ggwave.js"></script>
+</head>
+<body>
+<script src="icons.js"></script>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="word">echo</span>
+    </a>
+    <span class="links"><a class="link" href="signup.html">Create account</a></span>
+  </nav>
+
+  <div class="card" id="soundCard">
+    <h2>Welcome back</h2>
+    <p class="sub">Have your phone nearby with its Echo key open and listening.</p>
+    <label for="username">Username</label>
+    <input type="text" id="username" autocomplete="username" placeholder="your username" spellcheck="false"
+           onkeydown="if(event.key==='Enter')startLogin()">
+    <details>
+      <summary>Sound options</summary>
+      <select id="proto" style="margin-top:8px">
+        <option value="ULTRASOUND_NORMAL" selected>Silent (ultrasound) — recommended</option>
+        <option value="AUDIBLE_NORMAL">Audible chirps — fallback for older hardware</option>
+      </select>
+    </details>
+    <button class="btn" id="btnLogin" onclick="startLogin()">
+      <svg class="ic"><use href="#i-volume"/></svg> Sign in with Echo
+    </button>
+
+    <ul class="steps" id="steps" style="display:none">
+      <li id="st1">Requesting one-time code</li>
+      <li id="st2">Playing it to your phone — inaudible</li>
+      <li id="st3">Waiting for approval on your phone</li>
+      <li id="st4">Signed in</li>
+    </ul>
+    <div class="status" id="status"></div>
+    <button class="btn ghost" id="btnRetry" style="display:none" onclick="retransmit()">
+      <svg class="ic"><use href="#i-refresh"/></svg> Play again
+    </button>
+    <div class="divider">phone not around?</div>
+    <button class="btn ghost" onclick="showRecovery()">
+      <svg class="ic"><use href="#i-key"/></svg> Use a recovery code
+    </button>
+  </div>
+
+  <div class="card" id="recoveryCard" style="display:none">
+    <h2><svg class="ic"><use href="#i-key"/></svg> Recovery sign-in</h2>
+    <p class="sub">Enter your username and one of your saved recovery codes.
+       Each code works once.</p>
+    <label for="rUsername">Username</label>
+    <input type="text" id="rUsername" autocomplete="username" spellcheck="false">
+    <label for="rCode">Recovery code</label>
+    <input type="text" id="rCode" class="mono" placeholder="XXXX-XXXX" spellcheck="false"
+           onkeydown="if(event.key==='Enter')recoveryLogin()">
+    <button class="btn" id="btnRecovery" onclick="recoveryLogin()">Sign in</button>
+    <div class="status" id="rStatus"></div>
+    <button class="btn ghost" onclick="hideRecovery()">Back to sound sign-in</button>
+  </div>
+
+  <div class="status">New here? <a class="text" href="signup.html">Create your account</a></div>
+  <details><summary>debug log</summary><div class="log" id="log">log ready…</div></details>
+</div>
+
+<script>
+let ggwave = null, context = null, instance = null;
+let session = null, ws = null, txCount = 0, txTimer = null, startedAt = 0;
+const MAX_AUTO_TX = 3;
+
+const $ = id => document.getElementById(id);
+const log = m => { const el=$('log'); el.textContent += '\n' + new Date().toLocaleTimeString() + '  ' + m; el.scrollTop = el.scrollHeight; };
+
+if (typeof ggwave_factory === 'undefined') {
+  log('ERROR: ggwave.js missing from public/');
+} else {
+  ggwave_factory().then(g => { ggwave = g; log('ggwave loaded'); });
+}
+
+function ensureAudio() {
+  if (!context) {
+    context = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    const p = ggwave.getDefaultParameters();
+    p.sampleRateInp = context.sampleRate;
+    p.sampleRateOut = context.sampleRate;
+    instance = ggwave.init(p);
+  }
+  if (context.state === 'suspended') context.resume();
+}
+function convertTypedArray(src, type) {
+  const buffer = new ArrayBuffer(src.byteLength);
+  new src.constructor(buffer).set(src);
+  return new type(buffer);
+}
+const setStep = (n, cls) => { $('st' + n).className = cls; };
+
+async function startLogin() {
+  const username = $('username').value.trim();
+  if (!username) { $('status').textContent = 'Enter your username first'; return; }
+  if (!ggwave) { $('status').textContent = 'Sound library not loaded'; return; }
+  ensureAudio();
+  startedAt = Date.now();
+  $('btnLogin').disabled = true;
+  $('steps').style.display = '';
+  ['st1','st2','st3','st4'].forEach(id => $(id).className = '');
+  $('status').className = 'status'; $('status').textContent = '';
+  setStep(1, 'active');
+
+  let r;
+  try {
+    r = await fetch('/api/login/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+  } catch { return fail('Server unreachable'); }
+  if (!r.ok) {
+    const err = (await r.json().catch(() => ({}))).error || r.status;
+    return fail(err === 'unknown user or no enrolled device'
+      ? 'No account found — create one first' : 'Cannot start: ' + err);
+  }
+  session = await r.json();
+  setStep(1, 'done');
+  log('nonce ' + session.nonce + ' (ttl ' + session.ttlMs / 1000 + 's)');
+  openSocket();
+  txCount = 0;
+  transmitNonce();
+}
+
+function openSocket() {
+  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  ws = new WebSocket(proto + location.host + '/ws?session=' + session.sessionId);
+  ws.onmessage = async (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'authenticated') {
+      clearTimeout(txTimer);
+      setStep(3, 'done');
+      const r = await fetch('/api/session/claim', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.sessionId, claimToken: msg.claimToken })
+      });
+      if (r.ok) {
+        setStep(4, 'done');
+        $('status').className = 'status ok';
+        $('status').textContent = 'Signed in — redirecting…';
+        setTimeout(() => location.href = 'dashboard.html', 800);
+      } else fail('Session claim rejected');
+    }
+  };
+  ws.onerror = () => log('websocket error');
+}
+
+function transmitNonce() {
+  if (!session) return;
+  txCount++;
+  setStep(2, 'active');
+  const protoName = 'GGWAVE_PROTOCOL_' + $('proto').value;
+  const waveform = ggwave.encode(instance, session.nonce, ggwave.ProtocolId[protoName], 25);
+  const f32 = convertTypedArray(waveform, Float32Array);
+  const buf = context.createBuffer(1, f32.length, context.sampleRate);
+  buf.getChannelData(0).set(f32);
+  const src = context.createBufferSource();
+  src.buffer = buf;
+  src.connect(context.destination);
+  const dur = f32.length / context.sampleRate;
+  log('TX #' + txCount + ' (' + dur.toFixed(1) + 's, ' + $('proto').value + ')');
+  src.onended = () => {
+    setStep(2, 'done');
+    setStep(3, 'active');
+    $('btnRetry').style.display = '';
+    if (txCount < MAX_AUTO_TX) {
+      txTimer = setTimeout(() => { if ($('st3').className === 'active') transmitNonce(); }, 5000);
+    } else {
+      txTimer = setTimeout(() => {
+        if ($('st3').className === 'active')
+          fail('No response — your phone did not hear it. Move closer or try audible mode.');
+      }, Math.max(3000, session.ttlMs - (Date.now() - startedAt)));
+    }
+  };
+  src.start(0);
+}
+
+function retransmit() { if (session) { clearTimeout(txTimer); transmitNonce(); } }
+
+function fail(msg) {
+  clearTimeout(txTimer);
+  ['st1','st2','st3'].forEach(id => { if ($(id).className === 'active') $(id).className = 'fail'; });
+  $('status').className = 'status bad';
+  $('status').textContent = msg;
+  $('btnLogin').disabled = false;
+  $('btnRetry').style.display = 'none';
+  if (ws) { ws.close(); ws = null; }
+  session = null;
+  log('FAIL: ' + msg);
+}
+
+// ---------- recovery fallback ----------
+function showRecovery() {
+  $('soundCard').style.display = 'none';
+  $('recoveryCard').style.display = '';
+  $('rUsername').value = $('username').value;
+}
+function hideRecovery() {
+  $('recoveryCard').style.display = 'none';
+  $('soundCard').style.display = '';
+}
+async function recoveryLogin() {
+  const username = $('rUsername').value.trim();
+  const code = $('rCode').value.trim();
+  if (!username || !code) { $('rStatus').textContent = 'Enter both fields'; return; }
+  $('btnRecovery').disabled = true;
+  const r = await fetch('/api/login/recovery', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, code })
+  }).catch(() => null);
+  if (r && r.ok) {
+    const data = await r.json();
+    $('rStatus').className = 'status ok';
+    $('rStatus').textContent = 'Signed in — ' + data.remainingCodes + ' codes left. Redirecting…';
+    setTimeout(() => location.href = 'dashboard.html', 900);
+  } else {
+    const err = r ? (await r.json().catch(() => ({}))).error : 'Server unreachable';
+    $('rStatus').className = 'status bad';
+    $('rStatus').textContent = err || 'Sign-in failed';
+    $('btnRecovery').disabled = false;
+  }
+}
+
+fetch('/api/me').then(r => { if (r.ok) location.href = 'dashboard.html'; });
+</script>
+</body>
+</html>

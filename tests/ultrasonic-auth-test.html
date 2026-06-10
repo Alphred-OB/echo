@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultrasonic Auth — Hardware Test</title>
+<!-- Try local copy first (put ggwave.js in the same folder), fall back to CDN -->
+<script src="ggwave.js"></script>
+<script>
+  if (typeof ggwave_factory === 'undefined') {
+    document.write('<script src="https://cdn.jsdelivr.net/npm/ggwave@0.4.0/ggwave.min.js"><\/script>');
+  }
+</script>
+<style>
+  :root { --bg:#0f1420; --card:#1a2233; --accent:#4da3ff; --ok:#3ddc84; --bad:#ff5c5c; --text:#e8ecf4; --muted:#8b96ab; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  .wrap { max-width:560px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.25rem; margin:8px 0 2px; }
+  .sub { color:var(--muted); font-size:.85rem; margin-bottom:14px; }
+  .tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .tab { flex:1; padding:12px; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; background:var(--card); color:var(--muted); }
+  .tab.active { background:var(--accent); color:#08111f; }
+  .card { background:var(--card); border-radius:12px; padding:16px; margin-bottom:12px; }
+  label { display:block; font-size:.8rem; color:var(--muted); margin:10px 0 4px; }
+  select, input[type=range] { width:100%; }
+  select { padding:10px; border-radius:8px; border:1px solid #2c3850; background:#101828; color:var(--text); font-size:.95rem; }
+  .btn { width:100%; padding:14px; border:none; border-radius:10px; font-size:1.05rem; font-weight:700; cursor:pointer; margin-top:12px; }
+  .btn-send { background:var(--accent); color:#08111f; }
+  .btn-listen { background:var(--ok); color:#08111f; }
+  .btn-stop { background:var(--bad); color:#fff; }
+  .nonce { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:1.6rem; letter-spacing:2px; text-align:center; padding:14px; background:#101828; border-radius:10px; margin-top:10px; word-break:break-all; min-height:1.6em; }
+  .status { text-align:center; font-size:.9rem; color:var(--muted); margin-top:10px; min-height:1.2em; }
+  .status.ok { color:var(--ok); font-weight:700; }
+  .status.bad { color:var(--bad); }
+  .log { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.75rem; color:var(--muted); background:#0b101c; border-radius:8px; padding:10px; max-height:160px; overflow-y:auto; white-space:pre-wrap; }
+  .pulse { animation:pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+  .howto { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .howto b { color:var(--text); }
+  .vol-val { float:right; color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔊 Ultrasonic Auth — Hardware Test</h1>
+  <div class="sub">Step 1 of the prototype: can your laptop ↔ phone pass a nonce over near-ultrasound?</div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabSend" onclick="setMode('send')">💻 Laptop (Send)</button>
+    <button class="tab" id="tabRecv" onclick="setMode('recv')">📱 Phone (Listen)</button>
+  </div>
+
+  <div class="card" id="paneSend">
+    <label>Protocol</label>
+    <select id="protoSend">
+      <option value="ULTRASOUND_NORMAL" selected>Ultrasound — normal (most reliable)</option>
+      <option value="ULTRASOUND_FAST">Ultrasound — fast</option>
+      <option value="ULTRASOUND_FASTEST">Ultrasound — fastest</option>
+      <option value="AUDIBLE_NORMAL">Audible — fallback (you'll hear chirps)</option>
+      <option value="AUDIBLE_FAST">Audible fast — fallback</option>
+    </select>
+    <label>Volume <span class="vol-val" id="volVal">25</span></label>
+    <input type="range" id="vol" min="1" max="100" value="25" oninput="volVal.textContent=this.value">
+    <button class="btn btn-send" id="btnSend" onclick="transmit()">Generate nonce &amp; transmit</button>
+    <div class="nonce" id="sentNonce">—</div>
+    <div class="status" id="sendStatus">Nonce will appear here, then play as sound.</div>
+  </div>
+
+  <div class="card" id="paneRecv" style="display:none">
+    <label>Protocol must match the sender. Listening decodes all ggwave protocols automatically.</label>
+    <button class="btn btn-listen" id="btnListen" onclick="toggleListen()">🎤 Start listening</button>
+    <div class="nonce" id="recvNonce">—</div>
+    <div class="status" id="recvStatus">Tap start, allow microphone, hold phone ~30 cm – 2 m from the laptop.</div>
+  </div>
+
+  <div class="card">
+    <div class="howto" id="howto">
+      <b>How to test:</b><br>
+      0. One-time setup: download
+      <a href="https://cdn.jsdelivr.net/npm/ggwave@0.4.0/ggwave.js" download style="color:var(--accent)">ggwave.js</a>
+      and save it in the <b>same folder</b> as this page.<br>
+      1. Serve this file (mic needs a secure context): on the laptop run
+      <code>python3 -m http.server 8000</code> and open
+      <code>http://localhost:8000/ultrasonic-auth-test.html</code>.<br>
+      2. For the phone you need HTTPS — easiest: push this file to GitHub Pages, or run
+      <code>npx ngrok http 8000</code> and open the https URL on the phone.<br>
+      3. Phone: tab "Listen" → start. Laptop: tab "Send" → transmit.<br>
+      4. If the nonce matches on both screens — your hardware can do ultrasound. 🎉<br>
+      5. Record what works: max distance, volume needed, behavior with music/talking in the room.
+      <br><br><b>Quick same-laptop test:</b> open two tabs on localhost, one sending, one listening (works, since speaker and mic are on the same machine).
+    </div>
+  </div>
+
+  <div class="card"><div class="log" id="log">log ready…</div></div>
+</div>
+
+<script>
+let ggwave = null, context = null, instance = null;
+let mediaStream = null, recorder = null, stream = null, listening = false;
+
+const $ = id => document.getElementById(id);
+const log = m => { const el=$('log'); el.textContent += '\n' + new Date().toLocaleTimeString() + '  ' + m; el.scrollTop = el.scrollHeight; };
+
+if (typeof ggwave_factory === 'undefined') {
+  log('ERROR: ggwave library not loaded. Fix: download https://cdn.jsdelivr.net/npm/ggwave@0.4.0/ggwave.js and save it as "ggwave.js" in the SAME folder as this page, then refresh.');
+} else {
+  ggwave_factory().then(g => { ggwave = g; log('ggwave loaded ✓'); }).catch(e => log('ggwave init failed: ' + e));
+}
+
+function ensureInit() {
+  if (!context) {
+    context = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    const p = ggwave.getDefaultParameters();
+    p.sampleRateInp = context.sampleRate;
+    p.sampleRateOut = context.sampleRate;
+    instance = ggwave.init(p);
+    log('audio init @ ' + context.sampleRate + ' Hz');
+  }
+  if (context.state === 'suspended') context.resume();
+}
+
+function convertTypedArray(src, type) {
+  const buffer = new ArrayBuffer(src.byteLength);
+  new src.constructor(buffer).set(src);
+  return new type(buffer);
+}
+
+function setMode(m) {
+  $('paneSend').style.display = m === 'send' ? '' : 'none';
+  $('paneRecv').style.display = m === 'recv' ? '' : 'none';
+  $('tabSend').classList.toggle('active', m === 'send');
+  $('tabRecv').classList.toggle('active', m === 'recv');
+}
+
+function makeNonce() {
+  const b = new Uint8Array(4);
+  crypto.getRandomValues(b);
+  return Array.from(b, x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+function transmit() {
+  if (!ggwave) { log('ggwave not ready yet'); return; }
+  ensureInit();
+  const nonce = makeNonce();
+  $('sentNonce').textContent = nonce;
+  const protoName = 'GGWAVE_PROTOCOL_' + $('protoSend').value;
+  const proto = ggwave.ProtocolId[protoName];
+  const vol = parseInt($('vol').value, 10);
+  const waveform = ggwave.encode(instance, nonce, proto, vol);
+  const f32 = convertTypedArray(waveform, Float32Array);
+  const buf = context.createBuffer(1, f32.length, context.sampleRate);
+  buf.getChannelData(0).set(f32);
+  const src = context.createBufferSource();
+  src.buffer = buf;
+  src.connect(context.destination);
+  const dur = (f32.length / context.sampleRate).toFixed(1);
+  $('sendStatus').textContent = 'Transmitting (' + dur + ' s)…';
+  $('sendStatus').className = 'status pulse';
+  src.onended = () => { $('sendStatus').textContent = 'Sent ✓ — check the phone screen'; $('sendStatus').className = 'status ok'; };
+  src.start(0);
+  log('TX "' + nonce + '" proto=' + $('protoSend').value + ' vol=' + vol + ' dur=' + dur + 's');
+}
+
+function toggleListen() { listening ? stopListen() : startListen(); }
+
+function startListen() {
+  if (!ggwave) { log('ggwave not ready yet'); return; }
+  ensureInit();
+  navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
+  }).then(s => {
+    stream = s;
+    mediaStream = context.createMediaStreamSource(s);
+    recorder = context.createScriptProcessor(1024, 1, 1);
+    recorder.onaudioprocess = e => {
+      const samples = new Float32Array(e.inputBuffer.getChannelData(0));
+      const res = ggwave.decode(instance, convertTypedArray(samples, Int8Array));
+      if (res && res.length > 0) {
+        const text = new TextDecoder('utf-8').decode(res);
+        $('recvNonce').textContent = text;
+        $('recvStatus').textContent = 'Decoded ✓ ' + new Date().toLocaleTimeString();
+        $('recvStatus').className = 'status ok';
+        log('RX "' + text + '"');
+        if (navigator.vibrate) navigator.vibrate(120);
+      }
+    };
+    mediaStream.connect(recorder);
+    recorder.connect(context.destination);
+    listening = true;
+    $('btnListen').textContent = '⏹ Stop listening';
+    $('btnListen').className = 'btn btn-stop';
+    $('recvStatus').textContent = 'Listening…';
+    $('recvStatus').className = 'status pulse';
+    log('mic open, listening');
+  }).catch(err => {
+    $('recvStatus').textContent = 'Mic blocked: ' + err.name + ' (page must be https or localhost)';
+    $('recvStatus').className = 'status bad';
+    log('getUserMedia error: ' + err);
+  });
+}
+
+function stopListen() {
+  if (recorder) { recorder.disconnect(); recorder = null; }
+  if (mediaStream) { mediaStream.disconnect(); mediaStream = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  listening = false;
+  $('btnListen').textContent = '🎤 Start listening';
+  $('btnListen').className = 'btn btn-listen';
+  $('recvStatus').textContent = 'Stopped.';
+  $('recvStatus').className = 'status';
+  log('mic closed');
+}
+</script>
+</body>
+</html>
