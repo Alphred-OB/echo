@@ -15,6 +15,22 @@ const SIGN_PREFIX = 'echo-v1';      // domain separation for signatures
 const dbPath = process.env.ECHO_DB || path.join(__dirname, '../echo.db');
 const db = new DatabaseSync(dbPath);
 
+// Patch node:sqlite bug in v22.12.0 (Linux) where .get() returns e.g. { id: null }
+// instead of undefined for missing rows. This breaks truthiness checks.
+const originalPrepare = db.prepare.bind(db);
+db.prepare = function(sql) {
+  const stmt = originalPrepare(sql);
+  const originalGet = stmt.get.bind(stmt);
+  stmt.get = function(...args) {
+    const row = originalGet(...args);
+    if (row && typeof row === 'object' && Object.values(row).every(v => v === null)) {
+      return undefined;
+    }
+    return row;
+  };
+  return stmt;
+};
+
 try { 
   db.exec('PRAGMA journal_mode = WAL'); 
 } catch (e) { 
