@@ -4,59 +4,424 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Echo — passwordless sign-in over sound</title>
+<meta name="description" content="Echo signs you in with an inaudible one-time sound and your phone's approval. No passwords, nothing to phish.">
 <link rel="stylesheet" href="../echo.css">
+<script src="../ggwave.js"></script>
+<style>
+  /* homepage-only styles — extends the Echo design system */
+  .wrap.home { max-width:880px; }
+  .hero2 { text-align:center; padding:54px 0 30px; }
+  .hero2 h1 { font-size:clamp(2rem, 5vw, 3.1rem); line-height:1.12; letter-spacing:-.03em; margin:22px 0 14px; }
+  .hero2 h1 em { font-style:normal; color:var(--accent); }
+  .hero2 p { color:var(--muted); font-size:1.08rem; max-width:520px; margin:0 auto; }
+  .hero2 .cta { display:flex; gap:12px; max-width:380px; margin:30px auto 0; }
+  #heroCanvas { display:block; width:100%; max-width:680px; height:90px; margin:0 auto; }
+  .sec { margin:54px 0; }
+  .sec > h2 { font-size:1.45rem; letter-spacing:-.02em; margin:0 0 6px; text-align:center; }
+  .sec > .lead { text-align:center; color:var(--muted); max-width:520px; margin:0 auto 24px; }
+  .kicker { display:block; text-align:center; font-size:var(--fs-tiny); font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+
+  /* live demo */
+  .demo { padding:26px; }
+  #spec { display:block; width:100%; height:170px; border:1px solid var(--border); border-radius:var(--r-md); background:#fbfcfe; }
+  .demo .bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+  .demo .bar .btn { width:auto; margin:0; padding:12px 22px; }
+  .seg { display:inline-flex; border:1px solid var(--border-strong); border-radius:99px; overflow:hidden; }
+  .seg button { border:none; background:var(--surface); color:var(--muted); padding:9px 16px; font-size:var(--fs-small); font-weight:600; cursor:pointer; }
+  .seg button.on { background:var(--accent); color:#fff; }
+  .demo .meta { margin-left:auto; font-size:var(--fs-small); color:var(--muted); }
+  .demo .meta b { font-family:ui-monospace,Menlo,monospace; letter-spacing:1px; color:var(--text); }
+
+  /* stepper */
+  .flow { padding:26px; }
+  #scene { display:block; width:100%; height:auto; }
+  #scene text { font-family:system-ui,-apple-system,sans-serif; }
+  #scene .ghost { opacity:.28; transition:opacity .45s; }
+  #scene .live { opacity:1; }
+  #scene .arc { opacity:0; transition:opacity .45s; }
+  #scene.s2 .arc { opacity:1; }
+  #scene.s2 .arc circle { animation:ripple 1.4s ease-out infinite; }
+  @keyframes ripple { 0%{r:6; opacity:.9} 100%{r:46; opacity:0} }
+  .stepbtns { display:flex; gap:8px; justify-content:center; margin:18px 0 10px; flex-wrap:wrap; }
+  .stepbtns button { border:1px solid var(--border-strong); background:var(--surface); color:var(--muted); border-radius:99px; padding:9px 16px; font-size:var(--fs-small); font-weight:600; cursor:pointer; transition:all .2s; }
+  .stepbtns button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #stepCaption { text-align:center; color:var(--muted); font-size:var(--fs-body); min-height:2.6em; max-width:520px; margin:0 auto; }
+
+  /* security accordion */
+  .faq { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); margin:10px 0; box-shadow:var(--shadow); }
+  .faq summary { list-style:none; display:flex; align-items:center; gap:12px; padding:18px 20px; cursor:pointer; font-weight:600; font-size:var(--fs-body); color:var(--text); margin:0; }
+  .faq summary::-webkit-details-marker { display:none; }
+  .faq summary .ic { color:var(--accent); }
+  .faq summary .chev { margin-left:auto; color:var(--dim); transition:transform .25s; }
+  .faq[open] summary .chev { transform:rotate(90deg); }
+  .faq .body { padding:0 20px 18px 50px; color:var(--muted); font-size:var(--fs-small); line-height:1.65; }
+  .faq .body b { color:var(--text); }
+
+  /* stats strip */
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); padding:18px; text-align:center; box-shadow:var(--shadow); }
+  .stat .n { font-size:1.45rem; font-weight:700; letter-spacing:-.02em; color:var(--accent); }
+  .stat .l { color:var(--dim); font-size:var(--fs-tiny); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-top:3px; }
+  @media (max-width:680px) { .stats { grid-template-columns:repeat(2,1fr); } }
+
+  /* reveal on scroll */
+  .rv { opacity:0; transform:translateY(14px); transition:opacity .5s ease, transform .5s ease; }
+  .rv.in { opacity:1; transform:none; }
+  @media (prefers-reduced-motion:reduce) {
+    .rv { opacity:1; transform:none; transition:none; }
+    #scene.s2 .arc circle { animation:none; }
+    .wave.anim i { animation:none; }
+  }
+  .foot { text-align:center; color:var(--dim); font-size:var(--fs-tiny); padding:30px 0 10px; border-top:1px solid var(--border); margin-top:60px; }
+</style>
 </head>
 <body>
 <script src="../icons.js"></script>
-<div class="wrap">
+<div class="wrap home">
   <nav class="nav">
     <a class="brand" href="index.html">
       <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
       <span class="word">echo</span>
     </a>
     <span class="links">
+      <a class="link" href="#how">How it works</a>
+      <a class="link" href="#security">Security</a>
       <a class="link" href="login.html">Sign in</a>
       <a class="link primary" href="signup.html">Create account</a>
     </span>
   </nav>
 
-  <div class="hero">
-    <div class="wave big anim" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <header class="hero2">
+    <canvas id="heroCanvas" aria-hidden="true"></canvas>
     <h1>Sign in with <em>sound</em>.<br>No passwords. Ever.</h1>
-    <p>Your laptop plays an inaudible one-time code. Your phone hears it,
-       asks for your approval, and signs you in. Nothing to type, nothing to
-       phish, nothing to leak.</p>
+    <p>Your computer plays a one-time code you can't hear. Your phone hears it,
+       asks for your approval, and signs you in — in seconds.</p>
     <div class="cta">
       <button class="btn" onclick="location.href='signup.html'">Get started</button>
       <button class="btn ghost" onclick="location.href='login.html'">Sign in</button>
     </div>
-  </div>
+  </header>
 
-  <div class="card">
-    <h2>How it works</h2>
-    <div class="feature">
-      <div class="fico"><svg class="ic lg"><use href="#i-volume"/></svg></div>
-      <div><b>Inaudible handshake</b>
-      <span>The sign-in page plays a single-use cryptographic code at 18–20 kHz — above human hearing, well within your phone's.</span></div>
+  <section class="sec rv">
+    <div class="stats">
+      <div class="stat"><div class="n">0</div><div class="l">passwords stored</div></div>
+      <div class="stat"><div class="n">96-bit</div><div class="l">one-time codes</div></div>
+      <div class="stat"><div class="n">30 s</div><div class="l">code lifetime</div></div>
+      <div class="stat"><div class="n">~2 m</div><div class="l">proximity range</div></div>
     </div>
-    <div class="feature">
-      <div class="fico"><svg class="ic lg"><use href="#i-phone"/></svg></div>
-      <div><b>Your phone is the key</b>
-      <span>A private key generated on your phone — and unable to leave it — signs the code. You approve every sign-in.</span></div>
-    </div>
-    <div class="feature">
-      <div class="fico"><svg class="ic lg"><use href="#i-shield-check"/></svg></div>
-      <div><b>Replay-proof by design</b>
-      <span>Every sign-in plays a different sound. Each code is random, dies on first use, and expires in 30 seconds — a recording is worthless.</span></div>
-    </div>
-    <div class="feature">
-      <div class="fico"><svg class="ic lg"><use href="#i-ruler"/></svg></div>
-      <div><b>Proximity is the point</b>
-      <span>Ultrasound carries about two metres. If your phone can hear the laptop, you are standing at it — that is the proof.</span></div>
-    </div>
-  </div>
+  </section>
 
-  <div class="status">CY384 research artefact · Stemi Security Solutions scenario</div>
+  <section class="sec rv" id="listen">
+    <span class="kicker">Try it now</span>
+    <h2>The sound of a sign-in</h2>
+    <p class="lead">Press play. The spectrum proves something is playing —
+       your ears say otherwise. Your phone hears it loud and clear.</p>
+    <div class="card demo">
+      <canvas id="spec"></canvas>
+      <div class="bar">
+        <button class="btn" id="btnPlay" onclick="playDemo()">
+          <svg class="ic"><use href="#i-volume"/></svg> <span id="playLabel">Play a sign-in sound</span>
+        </button>
+        <span class="seg" role="group" aria-label="sound mode">
+          <button class="on" id="modeU" onclick="setMode('ULTRASOUND_NORMAL')">Silent</button>
+          <button id="modeA" onclick="setMode('AUDIBLE_NORMAL')">Audible</button>
+        </span>
+        <span class="meta">code: <b id="demoNonce">—</b></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec rv" id="how">
+    <span class="kicker">Under the hood</span>
+    <h2>Four steps, zero typing</h2>
+    <p class="lead">Watch a sign-in happen. Click a step to inspect it.</p>
+    <div class="card flow">
+      <svg id="scene" viewBox="0 0 640 250" role="img" aria-label="Diagram of the Echo sign-in flow">
+        <g id="gServer" class="ghost">
+          <rect x="270" y="18" width="100" height="58" rx="9" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
+          <line x1="282" y1="36" x2="318" y2="36" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="282" y1="48" x2="334" y2="48" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="352" cy="58" r="4" fill="var(--ok)"/>
+          <text x="320" y="94" font-size="12" fill="var(--dim)" text-anchor="middle">Echo server</text>
+        </g>
+        <g id="gLaptop" class="ghost">
+          <rect x="56" y="120" width="150" height="86" rx="8" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
+          <rect x="40" y="206" width="182" height="10" rx="5" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
+          <text id="laptopMsg" x="131" y="160" font-size="11" fill="var(--dim)" text-anchor="middle">login.html</text>
+          <text id="laptopMsg2" x="131" y="178" font-size="11" fill="var(--dim)" text-anchor="middle"></text>
+          <text x="131" y="236" font-size="12" fill="var(--dim)" text-anchor="middle">your computer</text>
+        </g>
+        <g id="gPhone" class="ghost">
+          <rect x="468" y="116" width="64" height="104" rx="10" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
+          <line x1="492" y1="208" x2="508" y2="208" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
+          <g id="phoneCheck" style="opacity:0; transition:opacity .45s">
+            <circle cx="500" cy="158" r="14" fill="none" stroke="var(--ok)" stroke-width="1.8"/>
+            <polyline points="493.5 158.5 498 163 507 153.5" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <text x="500" y="236" font-size="12" fill="var(--dim)" text-anchor="middle">your phone</text>
+        </g>
+        <g id="aReq" class="ghost" style="opacity:0">
+          <path d="M 175 120 Q 215 70 262 52" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-dasharray="5 5"/>
+          <path d="M 262 52 l -9 -1 m 9 1 l -5 8" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/>
+        </g>
+        <g class="arc" stroke="var(--accent)" fill="none" stroke-width="1.8">
+          <circle cx="216" cy="163" r="10"/>
+          <circle cx="216" cy="163" r="24" style="animation-delay:.45s"/>
+          <circle cx="216" cy="163" r="38" style="animation-delay:.9s"/>
+        </g>
+        <g id="aSig" class="ghost" style="opacity:0">
+          <path d="M 488 112 Q 440 60 380 46" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-dasharray="5 5"/>
+          <path d="M 380 46 l 9 -2 m -9 2 l 7 6" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round"/>
+        </g>
+        <g id="aOk" class="ghost" style="opacity:0">
+          <path d="M 268 76 Q 220 96 192 116" fill="none" stroke="var(--ok)" stroke-width="1.8"/>
+          <path d="M 192 116 l 3 -9 m -3 9 l 9 2" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round"/>
+        </g>
+      </svg>
+      <div class="stepbtns" id="stepBtns">
+        <button class="on" onclick="goStep(0,true)">1 · Request</button>
+        <button onclick="goStep(1,true)">2 · Sound</button>
+        <button onclick="goStep(2,true)">3 · Approve</button>
+        <button onclick="goStep(3,true)">4 · Signed in</button>
+      </div>
+      <p id="stepCaption"></p>
+    </div>
+  </section>
+
+  <section class="sec rv" id="security">
+    <span class="kicker">Security model</span>
+    <h2>Questions worth asking</h2>
+    <p class="lead">The honest answers, including the limits.</p>
+
+    <details class="faq">
+      <summary><svg class="ic"><use href="#i-refresh"/></svg> What if someone records the sound and replays it?
+        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
+      <div class="body">Nothing happens. Every sign-in plays a <b>different</b> sound — a fresh random
+        96-bit code that is destroyed the moment it is used and expires after 30 seconds anyway.
+        A recording is a ticket that has already been torn. This exact attack is part of our
+        automated test suite, and it fails every time.</div>
+    </details>
+    <details class="faq">
+      <summary><svg class="ic"><use href="#i-phone"/></svg> What if someone steals my phone?
+        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
+      <div class="body">They still need to get past your phone's own lock to open Echo Key and approve
+        anything — and every sign-in shows an explicit <b>approve / deny</b> prompt. From any other
+        signed-in computer you can <b>revoke</b> the stolen phone in one click, instantly turning
+        its key into junk.</div>
+    </details>
+    <details class="faq">
+      <summary><svg class="ic"><use href="#i-key"/></svg> What if I lose or change my phone?
+        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
+      <div class="body">Sign in with one of your single-use <b>recovery codes</b> (generated from your
+        dashboard, stored only as hashes), add the new phone by scanning a QR code, and revoke the
+        old one. Recovery attempts are rate-limited to five per 15 minutes.</div>
+    </details>
+    <details class="faq">
+      <summary><svg class="ic"><use href="#i-volume"/></svg> Does it work in a noisy room?
+        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
+      <div class="body">Usually yes — voices, music, and traffic live far below the 18–20 kHz band Echo
+        uses, and the encoding carries error correction. If the environment or hardware does
+        struggle, there is an <b>audible fallback</b> mode that trades silence for robustness.</div>
+    </details>
+    <details class="faq">
+      <summary><svg class="ic"><use href="#i-shield"/></svg> What does the server actually store?
+        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
+      <div class="body">Your username, your devices' <b>public</b> keys, and hashed recovery codes.
+        No passwords exist anywhere — not hashed, not encrypted, not at all. A complete database
+        breach gives an attacker nothing they can sign in with.</div>
+    </details>
+    <details class="faq">
+      <summary><svg class="ic"><use href="#i-alert"/></svg> What are the known limits?
+        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
+      <div class="body">A live <b>relay attack</b> — streaming the sound in real time to an accomplice
+        near your phone — is mitigated by the approve prompt and ultrasound's short range, but not
+        yet by cryptographic distance bounding. We say so openly; security products that claim no
+        limits have stopped being honest.</div>
+    </details>
+  </section>
+
+  <section class="sec rv center">
+    <h2>Ready to drop your password?</h2>
+    <p class="lead">Setup takes about a minute. All you need is this computer and your phone.</p>
+    <div class="cta" style="display:flex; gap:12px; max-width:360px; margin:18px auto 0">
+      <button class="btn" onclick="location.href='signup.html'">Create your account</button>
+    </div>
+  </section>
+
+  <div class="foot">Echo · CY384 research artefact · Stemi Security Solutions scenario · ultrasonic data transfer powered by ggwave</div>
 </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- hero canvas: layered sine waves ---------- */
+(function hero() {
+  const c = $('heroCanvas'), ctx = c.getContext('2d');
+  const dpr = devicePixelRatio || 1;
+  function size() { c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; }
+  size(); addEventListener('resize', size);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2e5cf6';
+  let t = 0;
+  function frame() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    const mid = c.height / 2;
+    for (let l = 0; l < 3; l++) {
+      ctx.beginPath();
+      for (let x = 0; x <= c.width; x += 3 * dpr) {
+        const p = x / c.width;
+        const env = Math.sin(p * Math.PI);           // fade at edges
+        const y = mid + Math.sin(p * 18 + t * (1 + l * .35) + l * 2) * env * (10 + l * 7) * dpr;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = accent;
+      ctx.globalAlpha = .65 - l * .22;
+      ctx.lineWidth = 1.6 * dpr;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    t += .025;
+    if (!reduced) requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+/* ---------- live sound demo with spectrum analyser ---------- */
+let ggwave = null, actx = null, ginst = null, analyser = null, playing = false, mode = 'ULTRASOUND_NORMAL';
+if (typeof ggwave_factory !== 'undefined') ggwave_factory().then(g => { ggwave = g; });
+
+function setMode(m) {
+  mode = m;
+  $('modeU').className = m.startsWith('ULTRA') ? 'on' : '';
+  $('modeA').className = m.startsWith('ULTRA') ? '' : 'on';
+}
+
+function specSetup() {
+  const c = $('spec'), dpr = devicePixelRatio || 1;
+  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr;
+  return [c, c.getContext('2d'), dpr];
+}
+
+function drawSpec() {
+  const [c, ctx, dpr] = specSetup();
+  const W = c.width, H = c.height, pad = 26 * dpr;
+  ctx.clearRect(0, 0, W, H);
+  const css = getComputedStyle(document.documentElement);
+  const accent = css.getPropertyValue('--accent').trim();
+  const border = css.getPropertyValue('--border-strong').trim();
+  const dim = css.getPropertyValue('--dim').trim();
+  const maxF = 24000, hearF = 17000;
+
+  // bars
+  if (analyser) {
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
+    const bars = 110, bw = (W - pad) / bars;
+    for (let i = 0; i < bars; i++) {
+      const bin = Math.floor(i / bars * data.length);
+      const v = data[bin] / 255;
+      const h = v * (H - 34 * dpr);
+      const f = i / bars * maxF;
+      ctx.fillStyle = f >= hearF ? accent : border;
+      ctx.globalAlpha = .25 + v * .75;
+      ctx.fillRect(pad / 2 + i * bw, H - 22 * dpr - h, Math.max(bw - 2 * dpr, 1), h);
+    }
+    ctx.globalAlpha = 1;
+  }
+  // axis + hearing limit marker
+  ctx.strokeStyle = border; ctx.lineWidth = dpr;
+  ctx.beginPath(); ctx.moveTo(pad / 2, H - 22 * dpr); ctx.lineTo(W - pad / 2, H - 22 * dpr); ctx.stroke();
+  const hx = pad / 2 + (hearF / maxF) * (W - pad);
+  ctx.setLineDash([4 * dpr, 4 * dpr]);
+  ctx.strokeStyle = dim;
+  ctx.beginPath(); ctx.moveTo(hx, 8 * dpr); ctx.lineTo(hx, H - 22 * dpr); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = dim; ctx.font = `${10 * dpr}px system-ui`; ctx.textAlign = 'left';
+  ctx.fillText('human hearing ends ≈17 kHz', hx + 6 * dpr, 16 * dpr);
+  ctx.textAlign = 'center';
+  [0, 6, 12, 18, 24].forEach(k => {
+    ctx.fillText(k + ' kHz', pad / 2 + (k * 1000 / maxF) * (W - pad), H - 8 * dpr);
+  });
+  if (playing) requestAnimationFrame(drawSpec);
+}
+
+function playDemo() {
+  if (!ggwave) return;
+  if (!actx) {
+    actx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    const p = ggwave.getDefaultParameters();
+    p.sampleRateInp = actx.sampleRate; p.sampleRateOut = actx.sampleRate;
+    ginst = ggwave.init(p);
+    analyser = actx.createAnalyser();
+    analyser.fftSize = 4096;
+    analyser.smoothingTimeConstant = .55;
+    analyser.connect(actx.destination);
+  }
+  if (actx.state === 'suspended') actx.resume();
+  if (playing) return;
+
+  const b = new Uint8Array(4); crypto.getRandomValues(b);
+  const nonce = Array.from(b, x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+  $('demoNonce').textContent = nonce;
+
+  const wf = ggwave.encode(ginst, nonce, ggwave.ProtocolId['GGWAVE_PROTOCOL_' + mode], 25);
+  const buffer = new ArrayBuffer(wf.byteLength);
+  new wf.constructor(buffer).set(wf);
+  const f32 = new Float32Array(buffer);
+  const buf = actx.createBuffer(1, f32.length, actx.sampleRate);
+  buf.getChannelData(0).set(f32);
+  const src = actx.createBufferSource();
+  src.buffer = buf;
+  src.connect(analyser);
+  playing = true;
+  $('playLabel').textContent = 'Playing…';
+  src.onended = () => {
+    setTimeout(() => {
+      playing = false;
+      $('playLabel').textContent = 'Play another';
+      drawSpec();
+    }, 400);
+  };
+  src.start(0);
+  drawSpec();
+}
+drawSpec();
+
+/* ---------- how-it-works stepper ---------- */
+const CAPTIONS = [
+  'Your computer asks the Echo server for a one-time code — a fresh random 96-bit value that will only ever be valid once, for 30 seconds.',
+  'The computer plays the code through its speaker at 18–20 kHz. You hear nothing. Your phone, listening nearby, decodes it instantly.',
+  'Your phone shows who is signing in and waits for your approval, then signs the code with a private key that physically cannot leave the device.',
+  'The server checks the signature against your enrolled public key and opens the session on your computer. Total time: a few seconds.'
+];
+let step = 0, autoTimer = null;
+
+function goStep(n, manual) {
+  step = n;
+  $('scene').setAttribute('class', n === 1 ? 's2' : 's' + (n + 1));
+  const set = (id, on) => $(id).setAttribute('class', on ? 'live' : 'ghost');
+  set('gLaptop', n === 0 || n === 1 || n === 3);
+  set('gServer', n === 0 || n === 2 || n === 3);
+  set('gPhone', n === 1 || n === 2);
+  $('aReq').style.opacity = n === 0 ? 1 : 0;
+  $('aSig').style.opacity = n === 2 ? 1 : 0;
+  $('aOk').style.opacity = n === 3 ? 1 : 0;
+  $('phoneCheck').style.opacity = n >= 2 ? 1 : 0;
+  $('laptopMsg').textContent = ['requesting code…', 'playing sound', 'waiting…', 'signed in'][n];
+  $('laptopMsg2').textContent = n === 3 ? 'welcome back' : '';
+  $('stepCaption').textContent = CAPTIONS[n];
+  [...$('stepBtns').children].forEach((b, i) => b.className = i === n ? 'on' : '');
+  if (manual) { clearInterval(autoTimer); autoTimer = null; }
+}
+
+goStep(0);
+if (!reduced) autoTimer = setInterval(() => goStep((step + 1) % 4), 3200);
+
+/* ---------- scroll reveal ---------- */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+}), { threshold: .12 });
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+</script>
 </body>
 </html>
