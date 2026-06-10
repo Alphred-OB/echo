@@ -42,6 +42,16 @@ app.get('/healthz', (_req, res) => res.json({ ok: true }));
 // Root redirect → web app landing page
 app.get('/', (_req, res) => res.redirect('/web/index.html'));
 
+app.get('/api/debug/:name', (req, res) => {
+  try {
+    const uname = req.params.name;
+    const user = db.prepare('SELECT id FROM users WHERE username = ?').get(uname);
+    res.json({ uname, user, isTruthy: !!user });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
 // ---------------------------------------------------------------- Signup
 
 // Step 1: claim a username and receive a single-use enroll token
