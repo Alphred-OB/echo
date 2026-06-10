@@ -40,7 +40,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
 // Root redirect → web app landing page
-app.get('/', (_req, res) => res.redirect('/web/index.html'));
+app.get('/', (_req, res) => res.redirect('/web/home.html'));
 
 // ---------------------------------------------------------------- Signup
 
