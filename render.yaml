@@ -10,10 +10,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      # Render injects PORT automatically — no need to set it here.
-      # ECHO_DB defaults to ./echo.db (project root) on the free plan.
-      # On a paid plan, add a disk below and set ECHO_DB to the mount path
-      # so enrolled keys survive redeploys.
+      # node:sqlite is built in from Node 22.5 — this pins the runtime version.
+      - key: NODE_VERSION
+        value: 22.5.0
 
     # ── Uncomment this block if you upgrade to a paid plan ──────────────
     # disk:
