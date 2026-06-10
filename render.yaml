@@ -12,7 +12,7 @@ services:
         value: production
       # node:sqlite is built in from Node 22.5 — this pins the runtime version.
       - key: NODE_VERSION
-        value: 22.5.0
+        value: 22.12.0
 
     # ── Uncomment this block if you upgrade to a paid plan ──────────────
     # disk:

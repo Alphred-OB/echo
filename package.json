@@ -4,8 +4,8 @@
   "description": "Echo — ultrasonic passwordless authentication (CY384 artefact)",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "test": "node tests/test-flow.js"
+    "start": "node --experimental-sqlite src/server.js",
+    "test": "node --experimental-sqlite tests/test-flow.js"
   },
   "engines": {
     "node": ">=22.5"
