@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Echo — create account</title>
-<link rel="stylesheet" href="echo.css">
-<script src="qrcode.js"></script>
+<link rel="stylesheet" href="../echo.css">
+<script src="../qrcode.js"></script>
 </head>
 <body>
-<script src="icons.js"></script>
+<script src="../icons.js"></script>
 <div class="wrap">
   <nav class="nav">
     <a class="brand" href="index.html">
@@ -82,7 +82,7 @@ async function signup() {
     return;
   }
   const data = await r.json();
-  enrollUrl = location.origin + '/phone.html?token=' + data.enrollToken;
+  enrollUrl = location.origin + '/phone/phone.html?token=' + data.enrollToken;
   $('doneName').textContent = data.username;
 
   const qr = qrcode(0, 'M');

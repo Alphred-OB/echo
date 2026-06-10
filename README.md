@@ -66,17 +66,21 @@ The server reads these environment variables at startup. All are optional.
 │   ├── API.md                  API endpoint specification
 │   └── Echo-PRD.md             Internal product requirements document
 ├── public/                     Static frontend assets served by Express
-│   ├── index.html              Landing page
-│   ├── signup.html             Account registration wizard
-│   ├── login.html              Laptop-side login interface
-│   ├── phone.html              Phone PWA key app
-│   ├── dashboard.html          Authenticated user dashboard
+│   ├── web/                    Web application (laptop/browser side)
+│   │   ├── index.html          Landing page
+│   │   ├── signup.html         Account registration wizard
+│   │   ├── login.html          Login page — broadcasts ultrasonic nonce
+│   │   └── dashboard.html      Authenticated user dashboard
+│   ├── phone/                  Phone PWA (mobile key app)
+│   │   ├── phone.html          Listens, decodes sound, approve/deny UI
+│   │   ├── manifest.webmanifest  PWA install manifest
+│   │   ├── sw.js               Service worker for offline caching
+│   │   ├── icon-192.png        PWA icon
+│   │   └── icon-512.png        PWA icon
 │   ├── echo.css                Shared design system stylesheet
 │   ├── ggwave.js               Acoustic encoding/decoding library (WASM)
 │   ├── qrcode.js               QR code generator library
-│   ├── icons.js                Inline SVG icon definitions
-│   ├── manifest.webmanifest    PWA manifest for the phone app
-│   └── sw.js                   Service worker for offline caching
+│   └── icons.js                Inline SVG icon definitions
 ├── src/                        Backend server source code
 │   ├── db.js                   SQLite schema, connection, and helper functions
 │   ├── server.js               Express application and REST API routes
@@ -96,11 +100,11 @@ The server reads these environment variables at startup. All are optional.
 ### First-time setup on a single machine (development)
 
 1. Start the server: `npm start`
-2. Open `http://localhost:8000/signup.html`
+2. Open `http://localhost:8000/web/signup.html`
 3. Choose a username and click **Continue**
 4. On the enrollment step, click **Enroll this device instead (dev)** — this opens the phone app in a new browser tab on the same machine
 5. In the phone tab, click **Make this my key**
-6. Return to `http://localhost:8000/login.html`, enter your username, and click **Sign in with Echo**
+6. Return to `http://localhost:8000/web/login.html`, enter your username, and click **Sign in with Echo**
 7. Approve the request on the phone tab
 
 ### Testing with a real phone
@@ -112,7 +116,7 @@ npm start
 npx ngrok http 8000
 ```
 
-Open the ngrok HTTPS URL on the laptop, complete signup, and scan the QR code with the phone camera. The phone will open the enrollment page over HTTPS.
+Open the ngrok HTTPS URL on the laptop, complete signup at `/web/signup.html`, and scan the QR code with the phone camera. The phone will open `/phone/phone.html` over HTTPS.
 
 ---
 

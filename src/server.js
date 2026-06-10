@@ -275,6 +275,7 @@ setInterval(() => {
 
 server.listen(PORT, () => {
   console.log(`Echo server running → http://localhost:${PORT}`);
-  console.log('  login page:      /login.html');
-  console.log('  phone app:       /phone.html');
+  console.log('  web app:         /web/index.html');
+  console.log('  login page:      /web/login.html');
+  console.log('  phone app:       /phone/phone.html');
 });

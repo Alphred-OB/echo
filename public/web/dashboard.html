@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Echo — dashboard</title>
-<link rel="stylesheet" href="echo.css">
-<script src="qrcode.js"></script>
+<link rel="stylesheet" href="../echo.css">
+<script src="../qrcode.js"></script>
 </head>
 <body>
-<script src="icons.js"></script>
+<script src="../icons.js"></script>
 <div class="wrap wide">
   <nav class="nav">
     <a class="brand" href="index.html">
@@ -161,7 +161,7 @@ async function addDevice() {
   const r = await fetch('/api/device/token', { method: 'POST' });
   if (!r.ok) return;
   const data = await r.json();
-  const url = location.origin + '/phone.html?token=' + data.enrollToken;
+  const url = location.origin + '/phone/phone.html?token=' + data.enrollToken;
   const qr = qrcode(0, 'M');
   qr.addData(url);
   qr.make();

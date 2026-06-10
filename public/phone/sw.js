@@ -1,7 +1,16 @@
 // Echo Key service worker — cache static shell for offline-capable startup.
 // API calls always go to the network.
-const CACHE = 'echo-v1';
-const ASSETS = ['phone.html', 'echo.css', 'ggwave.js', 'icons.js', 'manifest.webmanifest'];
+// Scope: /phone/ — serves only the phone PWA assets.
+const CACHE = 'echo-phone-v1';
+const ASSETS = [
+  '/phone/phone.html',
+  '/phone/manifest.webmanifest',
+  '/phone/icon-192.png',
+  '/phone/icon-512.png',
+  '/echo.css',
+  '/ggwave.js',
+  '/icons.js'
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
