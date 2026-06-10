@@ -15,6 +15,7 @@ const { attachWebSocket, notifyLaptop } = require('./websocket');
 
 const PORT = process.env.PORT || 8000;
 const ENROLL_TTL_MS = 10 * 60_000;
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 // Recovery code character set — avoids visually ambiguous characters
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -29,8 +30,17 @@ function makeCode() {
 // ---------------------------------------------------------------- Express
 
 const app = express();
+// Trust Render's (and any standard) reverse proxy so that req.protocol
+// reflects https and cookies can be marked Secure correctly.
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Health check — Render pings this to confirm the service is alive
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
+
+// Root redirect → web app landing page
+app.get('/', (_req, res) => res.redirect('/web/index.html'));
 
 // ---------------------------------------------------------------- Signup
 
@@ -160,8 +170,8 @@ app.post('/api/session/claim', (req, res) => {
   db.prepare('INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
     .run(token, user.id, now() + SESSION_TTL_MS, now());
 
-  res.setHeader('Set-Cookie',
-    `echo_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}`);
+  const cookieFlags = `HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${IS_PROD ? '; Secure' : ''}`;
+  res.setHeader('Set-Cookie', `echo_session=${token}; ${cookieFlags}`);
   res.json({ ok: true, username: ls.username });
 });
 
@@ -203,8 +213,8 @@ app.post('/api/login/recovery', (req, res) => {
   const token = rand(32);
   db.prepare('INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
     .run(token, user.id, now() + SESSION_TTL_MS, now());
-  res.setHeader('Set-Cookie',
-    `echo_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}`);
+  const cookieFlags = `HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${IS_PROD ? '; Secure' : ''}`;
+  res.setHeader('Set-Cookie', `echo_session=${token}; ${cookieFlags}`);
 
   const remaining = db.prepare('SELECT COUNT(*) c FROM recovery_codes WHERE user_id = ? AND used = 0').get(user.id).c;
   res.json({ ok: true, username: uname, remainingCodes: remaining });

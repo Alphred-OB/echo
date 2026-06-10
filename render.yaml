@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: echo-auth
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT automatically — no need to set it here.
+      # ECHO_DB defaults to ./echo.db (project root) on the free plan.
+      # On a paid plan, add a disk below and set ECHO_DB to the mount path
+      # so enrolled keys survive redeploys.
+
+    # ── Uncomment this block if you upgrade to a paid plan ──────────────
+    # disk:
+    #   name: echo-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    # Then add this env var:
+    #   - key: ECHO_DB
+    #     value: /var/data/echo.db
+    # ────────────────────────────────────────────────────────────────────
