@@ -35,9 +35,10 @@
   <div class="card center" id="keyCard" style="display:none">
     <div class="wave big" id="listenWave" style="justify-content:center; display:inline-flex"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <h2 style="justify-content:center" id="keyTitle">Ready</h2>
-    <p class="sub" style="margin-bottom:4px">
+    <p class="sub" style="margin-bottom:4px; display:flex; flex-wrap:wrap; justify-content:center; gap:4px">
       <span class="pill"><svg class="ic"><use href="#i-user"/></svg> <b id="whoami"></b></span>
       <span class="pill"><svg class="ic"><use href="#i-phone"/></svg> <span id="devname"></span></span>
+      <span class="pill" style="opacity:0.75; font-size:0.75rem; border:1px dashed var(--border)"><svg class="ic"><use href="#i-activity"/></svg> <span id="serverHost"></span></span>
     </p>
     <button class="btn green" id="btnListen" onclick="toggleListen()">
       <svg class="ic"><use href="#i-mic"/></svg> <span id="listenLabel">Start listening</span>
@@ -137,6 +138,7 @@ async function route() {
     $('keyCard').style.display = '';
     $('whoami').textContent = username;
     $('devname').textContent = await kvGet('deviceName') || 'device';
+    $('serverHost').textContent = location.host;
     renderHistory();
   } else {
     $('emptyCard').style.display = '';
