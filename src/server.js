@@ -41,6 +41,8 @@ app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
 // Root redirect → web app landing page
 app.get('/', (_req, res) => res.redirect('/web/home.html'));
+// Legacy path from before the home.html rename — keep old links working
+app.get('/web/index.html', (_req, res) => res.redirect('/web/home.html'));
 
 // ---------------------------------------------------------------- Signup
 
@@ -285,7 +287,7 @@ setInterval(() => {
 
 server.listen(PORT, () => {
   console.log(`Echo server running → http://localhost:${PORT}`);
-  console.log('  web app:         /web/index.html');
+  console.log('  web app:         /web/home.html');
   console.log('  login page:      /web/login.html');
   console.log('  phone app:       /phone/phone.html');
 });

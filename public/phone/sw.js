@@ -1,7 +1,7 @@
 // Echo Key service worker — cache static shell for offline-capable startup.
 // API calls always go to the network.
 // Scope: /phone/ — serves only the phone PWA assets.
-const CACHE = 'echo-phone-v1';
+const CACHE = 'echo-phone-v2';
 const ASSETS = [
   '/phone/phone.html',
   '/phone/manifest.webmanifest',

@@ -100,6 +100,11 @@ function convertTypedArray(src, type) {
 }
 const setStep = (n, cls) => { $('st' + n).className = cls; };
 
+async function matchCode(nonce) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nonce));
+  return String(10 + new Uint8Array(d)[0] % 90);
+}
+
 async function startLogin() {
   const username = $('username').value.trim();
   if (!username) { $('status').textContent = 'Enter your username first'; return; }
@@ -125,6 +130,7 @@ async function startLogin() {
       ? 'No account found — create one first' : 'Cannot start: ' + err);
   }
   session = await r.json();
+  session.match = await matchCode(session.nonce);
   setStep(1, 'done');
   log('nonce ' + session.nonce + ' (ttl ' + session.ttlMs / 1000 + 's)');
   openSocket();
@@ -160,7 +166,8 @@ function transmitNonce() {
   txCount++;
   setStep(2, 'active');
   const protoName = 'GGWAVE_PROTOCOL_' + $('proto').value;
-  const waveform = ggwave.encode(instance, session.nonce, ggwave.ProtocolId[protoName], 25);
+  // E1: envelope marks this as a genuine Echo sign-in; phones ignore unmarked sounds
+  const waveform = ggwave.encode(instance, 'E1:' + session.nonce, ggwave.ProtocolId[protoName], 25);
   const f32 = convertTypedArray(waveform, Float32Array);
   const buf = context.createBuffer(1, f32.length, context.sampleRate);
   buf.getChannelData(0).set(f32);
@@ -172,6 +179,8 @@ function transmitNonce() {
   src.onended = () => {
     setStep(2, 'done');
     setStep(3, 'active');
+    $('status').className = 'status';
+    $('status').textContent = 'Verification number: ' + session.match + ' — your phone should show the same.';
     $('btnRetry').style.display = '';
     if (txCount < MAX_AUTO_TX) {
       txTimer = setTimeout(() => { if ($('st3').className === 'active') transmitNonce(); }, 5000);

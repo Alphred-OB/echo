@@ -54,8 +54,10 @@
     <div class="bigico"><svg class="ic lg"><use href="#i-bell"/></svg></div>
     <h2 style="justify-content:center">Sign-in request</h2>
     <div class="who" id="approveWho"></div>
+    <div class="nonce" id="matchNum" style="font-size:1.6rem; font-weight:700; letter-spacing:4px; max-width:140px; margin:10px auto"></div>
     <p class="sub">A computer near you wants to sign in to your account.
-       Only approve if this is you.</p>
+       <b>Check this number is also on the computer's screen.</b>
+       No number there, or you're not signing in? Deny.</p>
     <div class="row">
       <button class="btn red" onclick="deny()"><svg class="ic"><use href="#i-x"/></svg> Deny</button>
       <button class="btn green" onclick="approve()"><svg class="ic"><use href="#i-check"/></svg> Approve</button>
@@ -202,10 +204,14 @@ function startListen() {
       const samples = new Float32Array(e.inputBuffer.getChannelData(0));
       const res = ggwave.decode(instance, convertTypedArray(samples, Int8Array));
       if (res && res.length > 0) {
-        const nonce = new TextDecoder('utf-8').decode(res);
-        if (nonce === lastNonce) return;
-        lastNonce = nonce;
-        heard(nonce);
+        const text = new TextDecoder('utf-8').decode(res);
+        if (text === lastNonce) return;
+        lastNonce = text;
+        // Only genuine Echo sign-in transmissions carry the E1: envelope.
+        // Anything else (demos, other apps, noise) is ignored — no prompt.
+        const m = /^E1:([A-Za-z0-9_-]{16})$/.exec(text);
+        if (m) heard(m[1]);
+        else setStatus('Heard a sound that is not an Echo sign-in — ignored');
       }
     };
     mediaStream.connect(recorder);
@@ -239,16 +245,24 @@ function setStatus(msg, cls) {
 }
 
 // ---------- consent + signing
+// Both ends derive the same 2-digit verification number from the nonce,
+// so the user can confirm the prompt belongs to THEIR sign-in (anti-fatigue).
+async function matchCode(nonce) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nonce));
+  return String(10 + new Uint8Array(d)[0] % 90);
+}
+
 async function heard(nonce) {
   pendingNonce = nonce;
   if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
   $('approveWho').textContent = await kvGet('username');
+  $('matchNum').textContent = await matchCode(nonce);
   $('keyCard').style.display = 'none';
   $('approveCard').style.display = '';
 }
 
 function manualApprove() {
-  const n = $('manualNonce').value.trim();
+  const n = $('manualNonce').value.trim().replace(/^E1:/, '');
   if (n) heard(n);
 }
 

@@ -205,7 +205,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>
 
 async function logout() {
   await fetch('/api/logout', { method: 'POST' });
-  location.href = 'index.html';
+  location.href = 'home.html';
 }
 load();
 </script>

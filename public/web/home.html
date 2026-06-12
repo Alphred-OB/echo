@@ -115,7 +115,8 @@
     <span class="kicker">Try it now</span>
     <h2>The sound of a sign-in</h2>
     <p class="lead">Press play. The spectrum proves something is playing —
-       your ears say otherwise. Your phone hears it loud and clear.</p>
+       your ears say otherwise. Echo Key phones ignore this demo: it lacks
+       the envelope that marks a real sign-in.</p>
     <div class="card demo">
       <canvas id="spec"></canvas>
       <div class="bar">
@@ -364,7 +365,8 @@ function playDemo() {
   const nonce = Array.from(b, x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
   $('demoNonce').textContent = nonce;
 
-  const wf = ggwave.encode(ginst, nonce, ggwave.ProtocolId['GGWAVE_PROTOCOL_' + mode], 25);
+  // DEMO: prefix — real sign-ins use an E1: envelope, so Echo Key phones ignore this sound
+  const wf = ggwave.encode(ginst, 'DEMO:' + nonce, ggwave.ProtocolId['GGWAVE_PROTOCOL_' + mode], 25);
   const buffer = new ArrayBuffer(wf.byteLength);
   new wf.constructor(buffer).set(wf);
   const f32 = new Float32Array(buffer);
