@@ -116,6 +116,30 @@ app.post('/api/login/start', (req, res) => {
   res.json({ sessionId, nonce, ttlMs: NONCE_TTL_MS });
 });
 
+// Pre-flight check: the phone silently checks if the nonce belongs to this device's owner
+app.get('/api/login/check', (req, res) => {
+  const nonce = String(req.query.nonce || '');
+  const deviceId = String(req.query.deviceId || '');
+  if (!nonce || !deviceId) {
+    return res.status(400).json({ error: 'nonce and deviceId required' });
+  }
+
+  const ls = db.prepare('SELECT * FROM login_sessions WHERE nonce = ?').get(nonce);
+  if (!ls) return res.status(404).json({ error: 'unknown nonce' });
+  if (ls.used) return res.status(410).json({ error: 'nonce already used' });
+  if (ls.expires_at < now()) return res.status(410).json({ error: 'nonce expired' });
+
+  const device = db.prepare(
+    `SELECT d.*, u.username FROM devices d JOIN users u ON u.id = d.user_id WHERE d.id = ?`
+  ).get(deviceId);
+
+  if (!device || device.username !== ls.username) {
+    return res.status(403).json({ error: 'mismatched user device' });
+  }
+
+  res.json({ ok: true, username: ls.username });
+});
+
 // Step 2: the phone submits the user-approved ECDSA signature over the nonce
 app.post('/api/login/verify', async (req, res) => {
   const { nonce, deviceId, signature } = req.body || {};
