@@ -184,24 +184,47 @@ app.post('/api/login/start', (req, res) => {
 app.get('/api/login/check', (req, res) => {
   const nonce    = String(req.query.nonce    || '');
   const deviceId = String(req.query.deviceId || '');
+  console.log(`[CHECK] Incoming pre-flight check - Nonce: "${nonce}", DeviceId: "${deviceId}"`);
 
   if (!nonce || !deviceId) {
+    console.log('[CHECK] Missing nonce or deviceId');
     return res.status(400).json({ error: 'nonce and deviceId required' });
   }
 
   const ls = db.prepare('SELECT * FROM login_sessions WHERE nonce = ?').get(nonce);
-  if (!ls)       return res.status(404).json({ error: 'unknown nonce' });
-  if (ls.used)   return res.status(410).json({ error: 'nonce already used' });
-  if (ls.expires_at < now()) return res.status(410).json({ error: 'nonce expired' });
+
+  // Log active nonces to diagnose host/timezone mismatches
+  const activeSessions = db.prepare('SELECT username, nonce, expires_at FROM login_sessions WHERE used = 0').all();
+  console.log(`[CHECK] Active nonces in database:`, activeSessions.map(s => `(${s.username}: "${s.nonce}", expires: ${s.expires_at})`));
+
+  if (!ls) {
+    console.log(`[CHECK] Nonce "${nonce}" NOT FOUND in database.`);
+    return res.status(404).json({ error: 'unknown nonce' });
+  }
+  if (ls.used) {
+    console.log(`[CHECK] Nonce "${nonce}" has already been used.`);
+    return res.status(410).json({ error: 'nonce already used' });
+  }
+  if (ls.expires_at < now()) {
+    console.log(`[CHECK] Nonce "${nonce}" expired at ${ls.expires_at} (current time: ${now()}).`);
+    return res.status(410).json({ error: 'nonce expired' });
+  }
 
   const device = db.prepare(
     `SELECT d.*, u.username FROM devices d JOIN users u ON u.id = d.user_id WHERE d.id = ?`
   ).get(deviceId);
 
-  if (!device || device.username !== ls.username) {
+  if (!device) {
+    console.log(`[CHECK] Device "${deviceId}" not found in database.`);
     return res.status(403).json({ error: 'mismatched user device' });
   }
 
+  if (device.username !== ls.username) {
+    console.log(`[CHECK] Mismatch! Device belongs to "${device.username}", but session belongs to "${ls.username}"`);
+    return res.status(403).json({ error: 'mismatched user device' });
+  }
+
+  console.log(`[CHECK] Pre-flight SUCCESS for user "${ls.username}" on device "${deviceId}"`);
   res.json({ ok: true, username: ls.username });
 });
 
