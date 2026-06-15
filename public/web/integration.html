@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echo — Developer Integration Guide</title>
+<meta name="description" content="Integrate ultrasonic passwordless authentication into your server backend with simple REST endpoints and keys.">
+<link rel="stylesheet" href="../echo.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<style>
+  .wrap.docs { max-width: 880px; padding-top: 120px; }
+  .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--border); margin-bottom: 20px; padding-bottom: 8px; }
+  .tab-btn { border: none; background: transparent; color: var(--muted); padding: 8px 16px; font-size: var(--fs-small); font-weight: 700; cursor: pointer; border-radius: var(--r-md); transition: all 0.2s; }
+  .tab-btn:hover { color: var(--text); background: rgba(15, 23, 42, 0.04); }
+  .tab-btn.on { background: var(--accent-soft); color: var(--accent); }
+  .code-panel { display: none; }
+  .code-panel.on { display: block; }
+  .doc-section { margin-bottom: 40px; }
+  .doc-section h3 { font-size: 1.15rem; font-weight: 750; margin-top: 24px; color: var(--text); }
+  .doc-section p { color: var(--muted); font-size: var(--fs-small); line-height: 1.6; }
+</style>
+</head>
+<body>
+<script src="../icons.js"></script>
+<div class="wrap docs">
+  <nav class="nav">
+    <a class="brand" href="home.html">
+      <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="word">echo</span>
+    </a>
+    <span class="links">
+      <a class="link" href="home.html#how">How it works</a>
+      <a class="link" href="technology.html">Technology</a>
+      <a class="link" href="integration.html">Developer</a>
+      <a class="link" href="login.html">Sign in</a>
+      <a class="link primary" href="signup.html">Create account</a>
+    </span>
+  </nav>
+
+  <header class="hero" style="text-align: left; padding: 20px 0 40px;">
+    <span class="kicker" style="text-align: left;">Developer API Reference</span>
+    <h1 style="margin-top: 10px; font-size: 2.4rem;">Integrate Echo in minutes</h1>
+    <p style="margin: 0; max-width: 620px;">Use our simple two-step REST protocol to authenticate user devices using acoustic signatures and non-exportable hardware keys.</p>
+  </header>
+
+  <div class="grid" style="grid-template-columns: 1fr;">
+    <div class="card" style="padding: 32px;">
+      <h2><svg class="ic"><use href="#i-activity"/></svg> Protocol Architecture</h2>
+      <p class="sub" style="margin-bottom: 0;">The Echo protocol operates as a simple validation pipeline between the client browser, the target authentication server, and the user's registered smartphone.</p>
+      
+      <div class="doc-section">
+        <h3>Step 1: Session Initiation</h3>
+        <p>The laptop web client requests a single-use nonce from your backend. Your backend creates a short-lived session, binds it to the requested username, and issues a 96-bit random nonce to be broadcast acoustically.</p>
+        
+        <div class="tabs">
+          <button class="tab-btn on" data-lang="node" onclick="setLang('node')">Node.js (Express)</button>
+          <button class="tab-btn" data-lang="py" onclick="setLang('py')">Python (FastAPI)</button>
+          <button class="tab-btn" data-lang="go" onclick="setLang('go')">Go (Standard)</button>
+        </div>
+
+        <!-- Node.js Tab -->
+        <div class="code-panel on" id="code-node-1">
+          <pre class="log" style="max-height: none;"><code class="mono" style="color: #475569;"><span style="color: #059669;">// POST /api/login/start</span>
+app.post(<span style="color: #2563eb;">'/api/login/start'</span>, (req, res) => {
+  <span style="color: #2563eb;">const</span> { username } = req.body;
+  <span style="color: #2563eb;">const</span> sessionId = crypto.randomBytes(<span style="color: #090d16;">16</span>).toString(<span style="color: #2563eb;">'base64url'</span>);
+  <span style="color: #2563eb;">const</span> nonce = crypto.randomBytes(<span style="color: #090d16;">12</span>).toString(<span style="color: #2563eb;">'base64url'</span>);
+  
+  db.run(<span style="color: #b45309;">`INSERT INTO login_sessions (id, username, nonce, expires_at) 
+          VALUES (?, ?, ?, ?)`</span>, [sessionId, username, nonce, Date.now() + <span style="color: #090d16;">30000</span>]);
+          
+  res.json({ sessionId, nonce, ttlMs: <span style="color: #090d16;">30000</span> });
+});</code></pre>
+        </div>
+
+        <!-- Python Tab -->
+        <div class="code-panel" id="code-py-1">
+          <pre class="log" style="max-height: none;"><code class="mono" style="color: #475569;"><span style="color: #059669;"># POST /api/login/start</span>
+<span style="color: #2563eb;">@app.post("/api/login/start")</span>
+<span style="color: #2563eb;">def</span> <span style="color: #1d4ed8;">login_start</span>(request: LoginRequest):
+    session_id = secrets.token_urlsafe(<span style="color: #090d16;">16</span>)
+    nonce = secrets.token_urlsafe(<span style="color: #090d16;">12</span>)
+    expires_at = int(time.time() * <span style="color: #090d16;">1000</span>) + <span style="color: #090d16;">30000</span>
+    
+    db.execute(<span style="color: #b45309;">"INSERT INTO login_sessions VALUES (?, ?, ?, ?)"</span>, 
+               (session_id, request.username, nonce, expires_at))
+               
+    <span style="color: #2563eb;">return</span> {"sessionId": session_id, "nonce": nonce, "ttlMs": <span style="color: #090d16;">30000</span>}</code></pre>
+        </div>
+
+        <!-- Go Tab -->
+        <div class="code-panel" id="code-go-1">
+          <pre class="log" style="max-height: none;"><code class="mono" style="color: #475569;"><span style="color: #059669;">// POST /api/login/start</span>
+func LoginStart(w http.ResponseWriter, r *http.Request) {
+    var req struct { Username string }
+    json.NewDecoder(r.Body).Decode(&req)
+    
+    sessionId := makeBase64UrlRandom(<span style="color: #090d16;">16</span>)
+    nonce := makeBase64UrlRandom(<span style="color: #090d16;">12</span>)
+    expiresAt := time.Now().Add(<span style="color: #090d16;">30</span> * time.Second).UnixMilli()
+    
+    db.Exec(<span style="color: #b45309;">"INSERT INTO login_sessions VALUES (?, ?, ?, ?)"</span>, 
+            sessionId, req.Username, nonce, expiresAt)
+            
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        <span style="color: #b45309;">"sessionId"</span>: sessionId,
+        <span style="color: #b45309;">"nonce"</span>:     nonce,
+        <span style="color: #b45309;">"ttlMs"</span>:     <span style="color: #090d16;">30000</span>,
+    })
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="doc-section">
+        <h3>Step 2: Signature Verification</h3>
+        <p>Once the user's phone decodes the acoustic wave and registers approval, it generates an ECDSA signature over the message pattern `echo-v1|&lt;nonce&gt;|&lt;deviceId&gt;`. The phone POSTs this signature back to your server for validation. You must burn the nonce immediately to reject replay attacks.</p>
+
+        <!-- Node.js Tab -->
+        <div class="code-panel on" id="code-node-2">
+          <pre class="log" style="max-height: none;"><code class="mono" style="color: #475569;"><span style="color: #059669;">// POST /api/login/verify</span>
+app.post(<span style="color: #2563eb;">'/api/login/verify'</span>, <span style="color: #2563eb;">async</span> (req, res) => {
+  <span style="color: #2563eb;">const</span> { nonce, deviceId, signature } = req.body;
+  <span style="color: #2563eb;">const</span> session = db.prepare(<span style="color: #b45309;">'SELECT * FROM login_sessions WHERE nonce = ?'</span>).get(nonce);
+  <span style="color: #2563eb;">if</span> (!session || session.used || session.expires_at &lt; Date.now()) {
+    <span style="color: #2563eb;">return</span> res.status(<span style="color: #090d16;">401</span>).json({ error: <span style="color: #fb7185;">'Invalid or expired session'</span> });
+  }
+
+  <span style="color: #059669;">// Burn the nonce instantly</span>
+  db.prepare(<span style="color: #b45309;">'UPDATE login_sessions SET used = 1 WHERE nonce = ?'</span>).run(nonce);
+  
+  <span style="color: #2563eb;">const</span> device = db.prepare(<span style="color: #b45309;">'SELECT pubkey_jwk FROM devices WHERE id = ?'</span>).get(deviceId);
+  <span style="color: #2563eb;">const</span> verified = <span style="color: #2563eb;">await</span> verifyECDSASignature(device.pubkey_jwk, <span style="color: #fb7185;">`echo-v1|${nonce}|${deviceId}`</span>, signature);
+  
+  <span style="color: #2563eb;">if</span> (verified) {
+    db.prepare(<span style="color: #b45309;">"UPDATE login_sessions SET status = 'approved' WHERE nonce = ?"</span>).run(nonce);
+    res.json({ ok: <span style="color: #2563eb;">true</span> });
+  } <span style="color: #2563eb;">else</span> {
+    res.status(<span style="color: #090d16;">401</span>).json({ error: <span style="color: #fb7185;">'Signature validation failed'</span> });
+  }
+});</code></pre>
+        </div>
+
+        <!-- Python Tab -->
+        <div class="code-panel" id="code-py-2">
+          <pre class="log" style="max-height: none;"><code class="mono" style="color: #475569;"><span style="color: #059669;"># POST /api/login/verify</span>
+<span style="color: #2563eb;">@app.post("/api/login/verify")</span>
+<span style="color: #2563eb;">def</span> <span style="color: #1d4ed8;">login_verify</span>(payload: VerifyPayload):
+    session = db.get_session(payload.nonce)
+    <span style="color: #2563eb;">if</span> <span style="color: #2563eb;">not</span> session <span style="color: #2563eb;">or</span> session["used"] <span style="color: #2563eb;">or</span> session["expires_at"] &lt; int(time.time() * <span style="color: #090d16;">1000</span>):
+        raise HTTPException(status_code=<span style="color: #090d16;">401</span>, detail=<span style="color: #fb7185;">"Invalid nonce"</span>)
+        
+    db.burn_nonce(payload.nonce)
+    pubkey = db.get_device_key(payload.device_id)
+    
+    msg = <span style="color: #b45309;">f"echo-v1|{payload.nonce}|{payload.device_id}"</span>
+    verified = verify_ecdsa(pubkey, msg, payload.signature)
+    
+    <span style="color: #2563eb;">if</span> verified:
+        db.approve_session(payload.nonce)
+        <span style="color: #2563eb;">return</span> {"ok": True}
+    <span style="color: #2563eb;">return</span> JSONResponse(status_code=<span style="color: #090d16;">401</span>, content={"error": <span style="color: #fb7185;">"Signature failed"</span>})</code></pre>
+        </div>
+
+        <!-- Go Tab -->
+        <div class="code-panel" id="code-go-2">
+          <pre class="log" style="max-height: none;"><code class="mono" style="color: #475569;"><span style="color: #059669;">// POST /api/login/verify</span>
+func LoginVerify(w http.ResponseWriter, r *http.Request) {
+    var req struct { Nonce, DeviceId, Signature string }
+    json.NewDecoder(r.Body).Decode(&req)
+    
+    session := db.GetSession(req.Nonce)
+    if session.Used || session.ExpiresAt &lt; time.Now().UnixMilli() {
+        w.WriteHeader(http.StatusUnauthorized)
+        return
+    }
+    
+    db.Exec(<span style="color: #b45309;">"UPDATE login_sessions SET used = 1 WHERE nonce = ?"</span>, req.Nonce)
+    pubkey := db.GetDeviceKey(req.DeviceId)
+    
+    msg := fmt.Sprintf(<span style="color: #b45309;">"echo-v1|%s|%s"</span>, req.Nonce, req.DeviceId)
+    if verifyECDSA(pubkey, msg, req.Signature) {
+        db.Exec(<span style="color: #b45309;">"UPDATE login_sessions SET status = 'approved' WHERE nonce = ?"</span>, req.Nonce)
+        json.NewEncoder(w).Encode(map[string]bool{<span style="color: #b45309;">"ok"</span>: true})
+    } else {
+        w.WriteHeader(http.StatusUnauthorized)
+    }
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="premium-footer">
+    <div class="footer-cols">
+      <div class="footer-brand-col">
+        <a class="brand" href="home.html" style="margin-bottom: 4px;">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word">echo</span>
+        </a>
+        <p class="footer-brand-desc">Ultrasonic passwordless authentication. Zero passwords, zero friction, complete cryptographic verification.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Technology</h4>
+        <ul>
+          <li><a href="technology.html">Physics & Audio</a></li>
+          <li><a href="technology.html">ECDSA P-256</a></li>
+          <li><a href="home.html#security">Threat Model</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="integration.html">API Reference</a></li>
+          <li><a href="integration.html">SDK Snippets</a></li>
+          <li><a href="https://github.com/ggerganov/ggwave" target="_blank" rel="noopener">ggwave Engine</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Account</h4>
+        <ul>
+          <li><a href="login.html">Sign In</a></li>
+          <li><a href="signup.html">Create Key</a></li>
+          <li><a href="dashboard.html">Console</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 Echo. CY384 Research Artefact · Stemi Security Solutions.</span>
+      <span class="footer-copy">Acoustic data transfer powered by ggwave.</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+function setLang(lang) {
+  // Update tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('on', btn.dataset.lang === lang);
+  });
+  // Update code display panels
+  document.querySelectorAll('.code-panel').forEach(panel => {
+    panel.style.display = panel.id.includes(lang) ? 'block' : 'none';
+  });
+}
+</script>
+</body>
+</html>

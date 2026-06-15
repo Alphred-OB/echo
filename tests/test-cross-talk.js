@@ -22,7 +22,7 @@ async function api(method, path, body = null) {
 async function enrollUser(username) {
   const keys = await subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
   const publicKeyJwk = await subtle.exportKey('jwk', keys.publicKey);
-  const signup = await api('POST', '/api/signup', { username });
+  const signup = await api('POST', '/api/signup', { username, password: 'testpassword123' });
   const enroll = await api('POST', '/api/enroll', {
     enrollToken: signup.json.enrollToken,
     deviceName: username + '-device',

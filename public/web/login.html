@@ -3,70 +3,126 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Echo — sign in</title>
+<title>Echo — Sign In</title>
 <link rel="stylesheet" href="../echo.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <script src="../ggwave.js"></script>
 </head>
 <body>
 <script src="../icons.js"></script>
-<div class="wrap">
-  <nav class="nav">
-    <a class="brand" href="home.html">
-      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-      <span class="word">echo</span>
-    </a>
-    <span class="links"><a class="link" href="signup.html">Create account</a></span>
-  </nav>
+<div class="wrap" style="padding-top: 60px; padding-bottom: 60px;">
+  <div style="margin-top: 20px;">
 
-  <div class="card" id="soundCard">
-    <h2>Welcome back</h2>
-    <p class="sub">Have your phone nearby with its Echo key open and listening.</p>
-    <label for="username">Username</label>
-    <input type="text" id="username" autocomplete="username" placeholder="your username" spellcheck="false"
-           onkeydown="if(event.key==='Enter')startLogin()">
-    <details>
-      <summary>Sound options</summary>
-      <select id="proto" style="margin-top:8px">
-        <option value="ULTRASOUND_NORMAL" selected>Silent (ultrasound) — recommended</option>
-        <option value="AUDIBLE_NORMAL">Audible chirps — fallback for older hardware</option>
-      </select>
-    </details>
-    <button class="btn" id="btnLogin" onclick="startLogin()">
-      <svg class="ic"><use href="#i-volume"/></svg> Sign in with Echo
-    </button>
+    <!-- ── Main sign-in card (sound-based) ── -->
+    <div class="card" id="soundCard">
+      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="word">echo</span>
+      </div>
 
-    <ul class="steps" id="steps" style="display:none">
-      <li id="st1">Requesting one-time code</li>
-      <li id="st2">Playing it to your phone — inaudible</li>
-      <li id="st3">Waiting for approval on your phone</li>
-      <li id="st4">Signed in</li>
-    </ul>
-    <div class="status" id="status"></div>
-    <button class="btn ghost" id="btnRetry" style="display:none" onclick="retransmit()">
-      <svg class="ic"><use href="#i-refresh"/></svg> Play again
-    </button>
-    <div class="divider">phone not around?</div>
-    <button class="btn ghost" onclick="showRecovery()">
-      <svg class="ic"><use href="#i-key"/></svg> Use a recovery code
-    </button>
+      <h2>
+        <svg class="ic" style="margin-right:6px"><use href="#i-volume"/></svg>
+        Welcome back
+      </h2>
+      <p class="sub">Make sure your phone is nearby with Echo open, then tap the button below. Your computer will play a silent sound and your phone will sign you in automatically.</p>
+
+      <label for="username">
+        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
+        Username
+      </label>
+      <input type="text" id="username" autocomplete="username" placeholder="your username" spellcheck="false"
+             onkeydown="if(event.key==='Enter')startLogin()">
+
+      <details style="margin-top:14px">
+        <summary style="font-size:var(--fs-small); font-weight:600; color:var(--dim); cursor:pointer;">
+          ⚙️ Sound quality options
+        </summary>
+        <select id="proto" style="margin-top:8px">
+          <option value="ULTRASOUND_NORMAL" selected>Silent (ultrasound) — best option, works automatically</option>
+          <option value="AUDIBLE_NORMAL">Audible chirps — use this if silent mode doesn't work on your device</option>
+        </select>
+      </details>
+
+      <button class="btn" id="btnLogin" onclick="startLogin()">
+        <svg class="ic"><use href="#i-volume"/></svg>
+        Sign in with Echo
+      </button>
+
+      <ul class="steps" id="steps" style="display:none">
+        <li id="st1">Getting a one-time code…</li>
+        <li id="st2">Sending it to your phone silently…</li>
+        <li id="st3">Waiting for your phone to confirm…</li>
+        <li id="st4">Signed in!</li>
+      </ul>
+      <div class="status" id="status"></div>
+
+      <button class="btn ghost" id="btnRetry" style="display:none" onclick="retransmit()">
+        <svg class="ic"><use href="#i-refresh"/></svg>
+        Send again
+      </button>
+
+      <div class="divider">Don't have your phone with you?</div>
+      <button class="btn ghost" onclick="showRecovery()">
+        <svg class="ic"><use href="#i-key"/></svg>
+        Sign in with backup password
+      </button>
+    </div>
+
+    <!-- ── Backup password card ── -->
+    <div class="card" id="recoveryCard" style="display:none">
+      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="word">echo</span>
+      </div>
+
+      <h2>
+        <svg class="ic" style="margin-right:6px"><use href="#i-key"/></svg>
+        Backup Sign-in
+      </h2>
+
+      <div class="notice-box">
+        <svg class="ic" style="width:18px;height:18px;flex-shrink:0"><use href="#i-info"/></svg>
+        <div>
+          This is your <strong>backup option</strong> — use it when your phone isn't available. Echo normally signs you in silently using sound.
+        </div>
+      </div>
+
+      <label for="rUsername">
+        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
+        Username
+      </label>
+      <input type="text" id="rUsername" autocomplete="username" placeholder="your username" spellcheck="false"
+             onkeydown="if(event.key==='Enter')document.getElementById('rPassword').focus()">
+
+      <label for="rPassword">
+        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-lock"/></svg>
+        Backup Password
+      </label>
+      <div class="pass-wrap">
+        <input type="password" id="rPassword" placeholder="your backup password"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')recoveryLogin()">
+        <button type="button" class="eye-btn" onclick="toggleEye('rPassword','rEyeIcon')" title="Show / hide password">
+          <svg class="ic" id="rEyeIcon"><use href="#i-eye"/></svg>
+        </button>
+      </div>
+
+      <div class="status" id="rStatus"></div>
+
+      <button class="btn" id="btnRecovery" onclick="recoveryLogin()">
+        <svg class="ic"><use href="#i-key"/></svg>
+        Sign in
+      </button>
+      <button class="btn ghost" style="margin-top:10px" onclick="hideRecovery()">
+        <svg class="ic"><use href="#i-volume"/></svg>
+        Back to sound sign-in
+      </button>
+    </div>
+
+    <div class="status" style="margin-bottom: 24px; margin-top: 18px;">
+      New here? <a class="text" href="signup.html">Create your account</a>
+    </div>
   </div>
-
-  <div class="card" id="recoveryCard" style="display:none">
-    <h2><svg class="ic"><use href="#i-key"/></svg> Recovery sign-in</h2>
-    <p class="sub">Enter your username and one of your saved recovery codes.
-       Each code works once.</p>
-    <label for="rUsername">Username</label>
-    <input type="text" id="rUsername" autocomplete="username" spellcheck="false">
-    <label for="rCode">Recovery code</label>
-    <input type="text" id="rCode" class="mono" placeholder="XXXX-XXXX" spellcheck="false"
-           onkeydown="if(event.key==='Enter')recoveryLogin()">
-    <button class="btn" id="btnRecovery" onclick="recoveryLogin()">Sign in</button>
-    <div class="status" id="rStatus"></div>
-    <button class="btn ghost" onclick="hideRecovery()">Back to sound sign-in</button>
-  </div>
-
-  <div class="status">New here? <a class="text" href="signup.html">Create your account</a></div>
-  <details><summary>debug log</summary><div class="log" id="log">log ready…</div></details>
 </div>
 
 <script>
@@ -75,12 +131,9 @@ let session = null, ws = null, txCount = 0, txTimer = null, startedAt = 0;
 const MAX_AUTO_TX = 3;
 
 const $ = id => document.getElementById(id);
-const log = m => { const el=$('log'); el.textContent += '\n' + new Date().toLocaleTimeString() + '  ' + m; el.scrollTop = el.scrollHeight; };
 
-if (typeof ggwave_factory === 'undefined') {
-  log('ERROR: ggwave.js missing from public/');
-} else {
-  ggwave_factory().then(g => { ggwave = g; log('ggwave loaded'); });
+if (typeof ggwave_factory !== 'undefined') {
+  ggwave_factory().then(g => { ggwave = g; });
 }
 
 function ensureAudio() {
@@ -93,11 +146,13 @@ function ensureAudio() {
   }
   if (context.state === 'suspended') context.resume();
 }
+
 function convertTypedArray(src, type) {
   const buffer = new ArrayBuffer(src.byteLength);
   new src.constructor(buffer).set(src);
   return new type(buffer);
 }
+
 const setStep = (n, cls) => { $('st' + n).className = cls; };
 
 async function matchCode(nonce) {
@@ -105,10 +160,19 @@ async function matchCode(nonce) {
   return String(10 + new Uint8Array(d)[0] % 90);
 }
 
+/* ── show / hide password ── */
+function toggleEye(inputId, iconId) {
+  const inp  = $(inputId);
+  const icon = $(iconId);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  icon.querySelector('use').setAttribute('href', show ? '#i-eye-off' : '#i-eye');
+}
+
 async function startLogin() {
   const username = $('username').value.trim();
-  if (!username) { $('status').textContent = 'Enter your username first'; return; }
-  if (!ggwave) { $('status').textContent = 'Sound library not loaded'; return; }
+  if (!username) { $('status').textContent = 'Please enter your username first'; return; }
+  if (!ggwave) { $('status').textContent = 'Sound module is still loading — please wait a moment and try again'; return; }
   ensureAudio();
   startedAt = Date.now();
   $('btnLogin').disabled = true;
@@ -123,16 +187,18 @@ async function startLogin() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username })
     });
-  } catch { return fail('Server unreachable'); }
+  } catch { return fail('Cannot reach the server — make sure it is running'); }
+
   if (!r.ok) {
     const err = (await r.json().catch(() => ({}))).error || r.status;
     return fail(err === 'unknown user or no enrolled device'
-      ? 'No account found — create one first' : 'Cannot start: ' + err);
+      ? 'No account found for that username — please create one first'
+      : 'Could not start sign-in: ' + err);
   }
+
   session = await r.json();
   session.match = await matchCode(session.nonce);
   setStep(1, 'done');
-  log('nonce ' + session.nonce + ' (ttl ' + session.ttlMs / 1000 + 's)');
   openSocket();
   txCount = 0;
   transmitNonce();
@@ -153,12 +219,12 @@ function openSocket() {
       if (r.ok) {
         setStep(4, 'done');
         $('status').className = 'status ok';
-        $('status').textContent = 'Signed in — redirecting…';
+        $('status').textContent = 'Signed in — taking you to your dashboard…';
         setTimeout(() => location.href = 'dashboard.html', 800);
-      } else fail('Session claim rejected');
+      } else fail('Could not complete sign-in. Please try again.');
     }
   };
-  ws.onerror = () => log('websocket error');
+  ws.onerror = () => {};
 }
 
 function transmitNonce() {
@@ -166,28 +232,25 @@ function transmitNonce() {
   txCount++;
   setStep(2, 'active');
   const protoName = 'GGWAVE_PROTOCOL_' + $('proto').value;
-  // E1: envelope marks this as a genuine Echo sign-in; phones ignore unmarked sounds
-  const waveform = ggwave.encode(instance, 'E1:' + session.nonce, ggwave.ProtocolId[protoName], 25);
+  const waveform  = ggwave.encode(instance, 'E1:' + session.nonce, ggwave.ProtocolId[protoName], 25);
   const f32 = convertTypedArray(waveform, Float32Array);
   const buf = context.createBuffer(1, f32.length, context.sampleRate);
   buf.getChannelData(0).set(f32);
   const src = context.createBufferSource();
   src.buffer = buf;
   src.connect(context.destination);
-  const dur = f32.length / context.sampleRate;
-  log('TX #' + txCount + ' (' + dur.toFixed(1) + 's, ' + $('proto').value + ')');
   src.onended = () => {
     setStep(2, 'done');
     setStep(3, 'active');
     $('status').className = 'status';
-    $('status').textContent = 'Verification number: ' + session.match + ' — your phone should show the same.';
+    $('status').textContent = 'Check your phone — it should show the number ' + session.match + '. If it matches, tap Approve.';
     $('btnRetry').style.display = '';
     if (txCount < MAX_AUTO_TX) {
       txTimer = setTimeout(() => { if ($('st3').className === 'active') transmitNonce(); }, 5000);
     } else {
       txTimer = setTimeout(() => {
         if ($('st3').className === 'active')
-          fail('No response — your phone did not hear it. Move closer or try audible mode.');
+          fail('Your phone did not pick up the sound. Move closer to your computer, turn up the volume, or switch to "Audible chirps" mode above.');
       }, Math.max(3000, session.ttlMs - (Date.now() - startedAt)));
     }
   };
@@ -205,10 +268,9 @@ function fail(msg) {
   $('btnRetry').style.display = 'none';
   if (ws) { ws.close(); ws = null; }
   session = null;
-  log('FAIL: ' + msg);
 }
 
-// ---------- recovery fallback ----------
+/* ── recovery fallback ── */
 function showRecovery() {
   $('soundCard').style.display = 'none';
   $('recoveryCard').style.display = '';
@@ -218,24 +280,28 @@ function hideRecovery() {
   $('recoveryCard').style.display = 'none';
   $('soundCard').style.display = '';
 }
+
 async function recoveryLogin() {
   const username = $('rUsername').value.trim();
-  const code = $('rCode').value.trim();
-  if (!username || !code) { $('rStatus').textContent = 'Enter both fields'; return; }
+  const password = $('rPassword').value;
+  if (!username || !password) {
+    $('rStatus').className = 'status bad';
+    $('rStatus').textContent = 'Please fill in both your username and backup password';
+    return;
+  }
   $('btnRecovery').disabled = true;
   const r = await fetch('/api/login/recovery', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, code })
+    body: JSON.stringify({ username, password })
   }).catch(() => null);
   if (r && r.ok) {
-    const data = await r.json();
     $('rStatus').className = 'status ok';
-    $('rStatus').textContent = 'Signed in — ' + data.remainingCodes + ' codes left. Redirecting…';
+    $('rStatus').textContent = 'Signed in — taking you to your dashboard…';
     setTimeout(() => location.href = 'dashboard.html', 900);
   } else {
-    const err = r ? (await r.json().catch(() => ({}))).error : 'Server unreachable';
+    const err = r ? (await r.json().catch(() => ({}))).error : 'Cannot reach the server';
     $('rStatus').className = 'status bad';
-    $('rStatus').textContent = err || 'Sign-in failed';
+    $('rStatus').textContent = err || 'Sign-in failed — check your username and password';
     $('btnRecovery').disabled = false;
   }
 }

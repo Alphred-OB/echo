@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echo — Technology Deep-Dive</title>
+<meta name="description" content="An overview of the acoustics and cryptography behind near-ultrasonic passwordless sign-ins.">
+<link rel="stylesheet" href="../echo.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<style>
+  .wrap.tech { max-width: 880px; padding-top: 120px; }
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 40px 0; }
+  @media (max-width: 768px) { .tech-grid { grid-template-columns: 1fr; } }
+  .diagram-box { background: #090d16; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; display: flex; justify-content: center; align-items: center; min-height: 180px; box-shadow: var(--shadow) inset; }
+  .math-card { background: var(--bg-dots); border: 1px solid var(--border-strong); border-radius: var(--r-md); padding: 16px; margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: var(--fs-small); color: var(--accent); }
+</style>
+</head>
+<body>
+<script src="../icons.js"></script>
+<div class="wrap tech">
+  <nav class="nav">
+    <a class="brand" href="home.html">
+      <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="word">echo</span>
+    </a>
+    <span class="links">
+      <a class="link" href="home.html#how">How it works</a>
+      <a class="link" href="technology.html">Technology</a>
+      <a class="link" href="integration.html">Developer</a>
+      <a class="link" href="login.html">Sign in</a>
+      <a class="link primary" href="signup.html">Create account</a>
+    </span>
+  </nav>
+
+  <header class="hero" style="text-align: left; padding: 20px 0 40px;">
+    <span class="kicker" style="text-align: left;">Under the Hood</span>
+    <h1 style="margin-top: 10px; font-size: 2.4rem;">The Physics & Cryptography of Echo</h1>
+    <p style="margin: 0; max-width: 620px;">A detailed look into how sound-waves and hardware-backed key pairs combine to form a secure, passwordless authentication protocol.</p>
+  </header>
+
+  <div class="tech-grid">
+    <div class="card" style="margin: 0;">
+      <h2><svg class="ic"><use href="#i-volume"/></svg> Acoustic Channel (ggwave)</h2>
+      <p class="sub">Audio modulation at 18–20 kHz.</p>
+      <p style="font-size: var(--fs-small); color: var(--muted); line-height: 1.6;">
+        Echo transmits single-use session tokens over high-frequency audio. The payload is modulated using Reed-Solomon error correction and processed via a compiled WebAssembly binary in the browser.
+      </p>
+      <div class="diagram-box">
+        <svg viewBox="0 0 200 80" width="100%" height="80">
+          <!-- Sine waves illustrating frequency bands -->
+          <path d="M 10 40 Q 20 10 30 40 T 50 40 T 70 40 T 90 40 T 110 40 T 130 40 T 150 40 T 170 40 T 190 40" fill="none" stroke="rgba(37, 99, 235, 0.4)" stroke-width="1.5"/>
+          <path d="M 10 40 Q 15 20 20 40 T 30 40 T 40 40 T 50 40 T 60 40 T 70 40 T 80 40 T 90 40 T 100 40 T 110 40 T 120 40 T 130 40 T 140 40 T 150 40 T 160 40 T 170 40 T 180 40 T 190 40" fill="none" stroke="var(--accent)" stroke-width="2"/>
+        </svg>
+      </div>
+      <p style="font-size: var(--fs-small); color: var(--muted); margin-top: 12px; line-height: 1.6;">
+        <strong>Frequency Selection:</strong> 18–20 kHz is selected because it is above the threshold of normal human hearing but remains within the sample range (44.1/48 kHz) of generic mobile microphones.
+      </p>
+    </div>
+
+    <div class="card" style="margin: 0;">
+      <h2><svg class="ic"><use href="#i-shield"/></svg> Device-Bound Cryptography</h2>
+      <p class="sub">Asymmetric ECDSA signing.</p>
+      <p style="font-size: var(--fs-small); color: var(--muted); line-height: 1.6;">
+        During account enrollment, the smartphone generates a non-exportable P-256 Elliptic Curve key pair. The private key is stored securely in the browser's IndexedDB and never leaves the device.
+      </p>
+      <div class="math-card">
+        Signature payload structure:<br>
+        <span style="color: var(--text);">"echo-v1|&lt;nonce&gt;|&lt;deviceId&gt;"</span>
+        <div style="margin-top: 8px; font-size: 11px; color: var(--dim);">
+          Algorithm: ECDSA / SHA-256<br>
+          Curve Name: NIST P-256
+        </div>
+      </div>
+      <p style="font-size: var(--fs-small); color: var(--muted); margin-top: 12px; line-height: 1.6;">
+        <strong>Phishing Mitigation:</strong> Because the signature includes the domain-separation prefix (`echo-v1`) and the unique device identifier, a stolen signature cannot be re-used to claim a session on a different domain.
+      </p>
+    </div>
+  </div>
+
+  <footer class="premium-footer">
+    <div class="footer-cols">
+      <div class="footer-brand-col">
+        <a class="brand" href="home.html" style="margin-bottom: 4px;">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word">echo</span>
+        </a>
+        <p class="footer-brand-desc">Ultrasonic passwordless authentication. Zero passwords, zero friction, complete cryptographic verification.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Technology</h4>
+        <ul>
+          <li><a href="technology.html">Physics & Audio</a></li>
+          <li><a href="technology.html">ECDSA P-256</a></li>
+          <li><a href="home.html#security">Threat Model</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="integration.html">API Reference</a></li>
+          <li><a href="integration.html">SDK Snippets</a></li>
+          <li><a href="https://github.com/ggerganov/ggwave" target="_blank" rel="noopener">ggwave Engine</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Account</h4>
+        <ul>
+          <li><a href="login.html">Sign In</a></li>
+          <li><a href="signup.html">Create Key</a></li>
+          <li><a href="dashboard.html">Console</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 Echo. CY384 Research Artefact · Stemi Security Solutions.</span>
+      <span class="footer-copy">Acoustic data transfer powered by ggwave.</span>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

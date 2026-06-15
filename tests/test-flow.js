@@ -22,12 +22,13 @@ async function api(path, body, opts = {}) {
 (async () => {
   console.log('Echo protocol test against ' + BASE + '\n');
   const username = 'testuser_' + Date.now();
+  const password = 'testpassword123';
 
   // 1. signup + enroll
   const keys = await subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
   const publicKeyJwk = await subtle.exportKey('jwk', keys.publicKey);
 
-  const signup = await api('/api/signup', { username });
+  const signup = await api('/api/signup', { username, password });
   check('signup returns enroll token', signup.status === 200 && signup.json.enrollToken);
   const enrollToken = signup.json.enrollToken;
 
@@ -41,7 +42,7 @@ async function api(path, body, opts = {}) {
   const reuse = await api('/api/enroll', { enrollToken, deviceName: 'rogue2', publicKeyJwk });
   check('enroll token single-use', reuse.status === 401);
 
-  const taken = await api('/api/signup', { username });
+  const taken = await api('/api/signup', { username, password });
   check('taken username rejected', taken.status === 409);
 
   const status = await fetch(BASE + '/api/signup/status?token=' + enrollToken);
@@ -74,7 +75,7 @@ async function api(path, body, opts = {}) {
   // 6. wrong user's device
   const mallory = 'mallory_' + Date.now();
   const mkeys = await subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
-  const msignup = await api('/api/signup', { username: mallory });
+  const msignup = await api('/api/signup', { username: mallory, password: 'mallorypassword123' });
   const menroll = await api('/api/enroll', {
     enrollToken: msignup.json.enrollToken, deviceName: 'mallory-phone',
     publicKeyJwk: await subtle.exportKey('jwk', mkeys.publicKey)
@@ -113,22 +114,15 @@ async function api(path, body, opts = {}) {
   const reclaim = await api('/api/session/claim', { sessionId: start4.json.sessionId, claimToken: msg.claimToken });
   check('claim token single-use', reclaim.status === 401);
 
-  // 10. recovery codes: generate (auth), login with one, single-use, then revoke device
-  const authCookie = cookie.split(';')[0];
-  const gen = await fetch(BASE + '/api/recovery/generate', { method: 'POST', headers: { cookie: authCookie } });
-  const genJson = await gen.json();
-  check('recovery codes generated (6)', gen.status === 200 && genJson.codes.length === 6);
+  // 10. fallback password login
+  const rec = await api('/api/login/recovery', { username, password });
+  check('fallback password login works', rec.status === 200 && rec.json.username === username);
 
-  const rec = await api('/api/login/recovery', { username, code: genJson.codes[0] });
-  check('recovery code login works', rec.status === 200 && rec.json.remainingCodes === 5);
-
-  const recReuse = await api('/api/login/recovery', { username, code: genJson.codes[0] });
-  check('recovery code single-use', recReuse.status === 401);
-
-  const recBad = await api('/api/login/recovery', { username, code: 'AAAA-AAAA' });
-  check('wrong recovery code rejected', recBad.status === 401);
+  const recBad = await api('/api/login/recovery', { username, password: 'wrongpassword' });
+  check('wrong fallback password rejected', recBad.status === 401);
 
   // device management
+  const authCookie = cookie.split(';')[0];
   const devToken = await fetch(BASE + '/api/device/token', { method: 'POST', headers: { cookie: authCookie } });
   const devTokenJson = await devToken.json();
   check('add-device token issued (auth)', devToken.status === 200 && devTokenJson.enrollToken);

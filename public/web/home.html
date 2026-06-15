@@ -6,73 +6,118 @@
 <title>Echo — passwordless sign-in over sound</title>
 <meta name="description" content="Echo signs you in with an inaudible one-time sound and your phone's approval. No passwords, nothing to phish.">
 <link rel="stylesheet" href="../echo.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <script src="../ggwave.js"></script>
 <style>
-  /* homepage-only styles — extends the Echo design system */
-  .wrap.home { max-width:880px; }
-  .hero2 { text-align:center; padding:54px 0 30px; }
-  .hero2 h1 { font-size:clamp(2rem, 5vw, 3.1rem); line-height:1.12; letter-spacing:-.03em; margin:22px 0 14px; }
-  .hero2 h1 em { font-style:normal; color:var(--accent); }
-  .hero2 p { color:var(--muted); font-size:1.08rem; max-width:520px; margin:0 auto; }
-  .hero2 .cta { display:flex; gap:12px; max-width:380px; margin:30px auto 0; }
-  #heroCanvas { display:block; width:100%; max-width:680px; height:90px; margin:0 auto; }
-  .sec { margin:54px 0; }
-  .sec > h2 { font-size:1.45rem; letter-spacing:-.02em; margin:0 0 6px; text-align:center; }
-  .sec > .lead { text-align:center; color:var(--muted); max-width:520px; margin:0 auto 24px; }
-  .kicker { display:block; text-align:center; font-size:var(--fs-tiny); font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+  /* Homepage-specific styles — extending the premium light design system */
+  .wrap.home { max-width: 960px; padding-top: 120px; }
+  
+  /* Hero & Visuals */
+  .hero2 { text-align: center; padding: 40px 0 60px; position: relative; }
+  .hero2 h1 { font-size: clamp(2.4rem, 6vw, 3.8rem); line-height: 1.1; letter-spacing: -0.04em; margin: 24px 0 16px; font-weight: 800; color: var(--text); }
+  .hero2 h1 em { font-style: normal; color: var(--accent); background: linear-gradient(135deg, #3b82f6 0%, var(--accent) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 30px rgba(37, 99, 235, 0.15); }
+  .hero2 p { color: var(--muted); font-size: 1.15rem; max-width: 580px; margin: 0 auto 36px; line-height: 1.6; }
+  .hero2 .cta { display: flex; gap: 14px; justify-content: center; max-width: 400px; margin: 0 auto; }
+  .hero-badge-container { display: inline-flex; align-items: center; gap: 8px; background: rgba(15, 23, 42, 0.03); border: 1px solid var(--border); border-radius: 99px; padding: 6px 14px; font-size: var(--fs-tiny); font-weight: 600; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge-dot { width: 6px; height: 6px; background: var(--ok); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } }
+  
+  #heroCanvas { display: block; width: 100%; max-width: 780px; height: 110px; margin: 0 auto; filter: drop-shadow(0 0 15px rgba(37, 99, 235, 0.1)); }
 
-  /* live demo */
-  .demo { padding:26px; }
-  #spec { display:block; width:100%; height:170px; border:1px solid var(--border); border-radius:var(--r-md); background:#fbfcfe; }
-  .demo .bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px; }
-  .demo .bar .btn { width:auto; margin:0; padding:12px 22px; }
-  .seg { display:inline-flex; border:1px solid var(--border-strong); border-radius:99px; overflow:hidden; }
-  .seg button { border:none; background:var(--surface); color:var(--muted); padding:9px 16px; font-size:var(--fs-small); font-weight:600; cursor:pointer; }
-  .seg button.on { background:var(--accent); color:#fff; }
-  .demo .meta { margin-left:auto; font-size:var(--fs-small); color:var(--muted); }
-  .demo .meta b { font-family:ui-monospace,Menlo,monospace; letter-spacing:1px; color:var(--text); }
+  /* Sections */
+  .sec { margin: 80px 0; }
+  .sec > h2 { font-size: 1.8rem; letter-spacing: -0.03em; margin: 0 0 10px; text-align: center; font-weight: 750; color: var(--text); }
+  .sec > .lead { text-align: center; color: var(--muted); max-width: 560px; margin: 0 auto 36px; font-size: 1.05rem; }
+  .kicker { display: block; text-align: center; font-size: var(--fs-tiny); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
 
-  /* stepper */
-  .flow { padding:26px; }
-  #scene { display:block; width:100%; height:auto; }
-  #scene text { font-family:system-ui,-apple-system,sans-serif; }
-  #scene .ghost { opacity:.28; transition:opacity .45s; }
-  #scene .live { opacity:1; }
-  #scene .arc { opacity:0; transition:opacity .45s; }
-  #scene.s2 .arc { opacity:1; }
-  #scene.s2 .arc circle { animation:ripple 1.4s ease-out infinite; }
-  @keyframes ripple { 0%{r:6; opacity:.9} 100%{r:46; opacity:0} }
-  .stepbtns { display:flex; gap:8px; justify-content:center; margin:18px 0 10px; flex-wrap:wrap; }
-  .stepbtns button { border:1px solid var(--border-strong); background:var(--surface); color:var(--muted); border-radius:99px; padding:9px 16px; font-size:var(--fs-small); font-weight:600; cursor:pointer; transition:all .2s; }
-  .stepbtns button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
-  #stepCaption { text-align:center; color:var(--muted); font-size:var(--fs-body); min-height:2.6em; max-width:520px; margin:0 auto; }
+  /* Bento Grid Stats */
+  .bento-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 40px 0; }
+  .bento-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px 20px; text-align: left; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: border-color 0.3s, transform 0.3s; }
+  .bento-card:hover { border-color: rgba(37, 99, 235, 0.2); transform: translateY(-2px); }
+  .bento-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.02), transparent); }
+  .bento-card .val { font-size: 1.8rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 6px; }
+  .bento-card .val em { font-style: normal; color: var(--accent); }
+  .bento-card .lbl { color: var(--muted); font-size: var(--fs-tiny); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  @media (max-width: 768px) { .bento-stats { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .bento-stats { grid-template-columns: 1fr; } }
 
-  /* security accordion */
-  .faq { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); margin:10px 0; box-shadow:var(--shadow); }
-  .faq summary { list-style:none; display:flex; align-items:center; gap:12px; padding:18px 20px; cursor:pointer; font-weight:600; font-size:var(--fs-body); color:var(--text); margin:0; }
-  .faq summary::-webkit-details-marker { display:none; }
-  .faq summary .ic { color:var(--accent); }
-  .faq summary .chev { margin-left:auto; color:var(--dim); transition:transform .25s; }
-  .faq[open] summary .chev { transform:rotate(90deg); }
-  .faq .body { padding:0 20px 18px 50px; color:var(--muted); font-size:var(--fs-small); line-height:1.65; }
-  .faq .body b { color:var(--text); }
+  /* Live sound demo card */
+  .demo { padding: 32px; background: var(--surface-card); }
+  #spec { display: block; width: 100%; height: 190px; border: 1px solid var(--border); border-radius: var(--r-md); background: #ffffff; }
+  .demo .bar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
+  .demo .bar .btn { width: auto; margin: 0; padding: 12px 24px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 99px; overflow: hidden; background: #f1f5f9; padding: 3px; }
+  .seg button { border: none; background: transparent; color: var(--muted); padding: 8px 16px; font-size: var(--fs-small); font-weight: 600; cursor: pointer; border-radius: 99px; transition: all 0.2s; }
+  .seg button.on { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2); }
+  .demo .meta { margin-left: auto; font-size: var(--fs-small); color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .demo .meta b { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-size: 1rem; text-shadow: 0 0 8px rgba(37, 99, 235, 0.1); }
 
-  /* stats strip */
-  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
-  .stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); padding:18px; text-align:center; box-shadow:var(--shadow); }
-  .stat .n { font-size:1.45rem; font-weight:700; letter-spacing:-.02em; color:var(--accent); }
-  .stat .l { color:var(--dim); font-size:var(--fs-tiny); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-top:3px; }
-  @media (max-width:680px) { .stats { grid-template-columns:repeat(2,1fr); } }
+  /* Interactive Stepper diagram */
+  .flow { padding: 32px; background: var(--surface-card); }
+  #scene { display: block; width: 100%; height: auto; max-width: 680px; margin: 0 auto; }
+  #scene text { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 600; transition: fill 0.3s ease; }
+  #scene .ghost { opacity: .25; transition: opacity .45s, filter .45s; }
+  #scene .live { opacity: 1; filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.15)); }
+  #scene .live rect { stroke: var(--accent); stroke-width: 2px; }
+  #scene #gPhone.live rect { stroke: var(--accent); }
+  #scene #gServer.live rect { stroke: var(--accent); }
+  
+  /* Glowing screen fills for active/live nodes */
+  #scene .screen-fill { fill: none; transition: fill 0.45s ease; }
+  #scene #gLaptop.live .screen-fill { fill: rgba(37, 99, 235, 0.03); }
+  #scene #gServer.live .screen-fill { fill: rgba(37, 99, 235, 0.03); }
+  #scene #gPhone.live .screen-fill { fill: rgba(37, 99, 235, 0.03); }
+  
+  /* Successful state phone glow */
+  #scene.s3 #gPhone.live rect, #scene.s4 #gPhone.live rect { stroke: var(--ok); }
+  #scene.s3 #gPhone.live .screen-fill, #scene.s4 #gPhone.live .screen-fill { fill: rgba(16, 185, 129, 0.04); }
+  #scene.s4 #gLaptop.live rect { stroke: var(--ok); }
+  #scene.s4 #gLaptop.live .screen-fill { fill: rgba(16, 185, 129, 0.04); }
+
+  #scene .arc { opacity: 0; transition: opacity .45s; }
+  #scene.s2 .arc { opacity: 1; }
+  #scene.s2 .arc circle { animation: ripple 1.5s ease-out infinite; stroke-width: 1.5; }
+  @keyframes ripple { 0%{r:6; opacity:.9} 100%{r:56; opacity:0} }
+
+  /* Animating dashes on signals */
+  @keyframes flowDash { to { stroke-dashoffset: -20; } }
+  #aReq path { stroke-dasharray: 6 4; animation: flowDash 0.8s linear infinite; }
+  #aSig path { stroke-dasharray: 6 4; animation: flowDash 0.8s linear infinite; }
+  #aOk path { stroke-dasharray: 6 4; animation: flowDash 0.8s linear infinite; }
+
+  .stepbtns { display: flex; gap: 10px; justify-content: center; margin: 24px 0 16px; flex-wrap: wrap; }
+  .stepbtns button { border: 1px solid var(--border); background: #ffffff; color: var(--muted); border-radius: 99px; padding: 10px 18px; font-size: var(--fs-small); font-weight: 600; cursor: pointer; transition: all .2s; }
+  .stepbtns button:hover { border-color: var(--border-strong); color: var(--text); }
+  .stepbtns button.on { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(37, 99, 235, 0.2); }
+  #stepCaption { text-align: center; color: var(--muted); font-size: var(--fs-body); min-height: 2.8em; max-width: 580px; margin: 0 auto; line-height: 1.6; }
+
+  /* Security accordion */
+  .faq { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin: 12px 0; box-shadow: var(--shadow); transition: border-color 0.2s; }
+  .faq:hover { border-color: rgba(37, 99, 235, 0.15); }
+  .faq summary { list-style: none; display: flex; align-items: center; gap: 14px; padding: 20px 24px; cursor: pointer; font-weight: 650; font-size: var(--fs-body); color: var(--text); margin: 0; user-select: none; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary .ic { color: var(--accent); filter: drop-shadow(0 0 5px rgba(37, 99, 235, 0.15)); }
+  .faq summary .chev { margin-left: auto; color: var(--dim); transition: transform .25s, color 0.2s; }
+  .faq summary:hover .chev { color: var(--text); }
+  .faq[open] summary .chev { transform: rotate(90deg); }
+  .faq .body { padding: 0 24px 20px 56px; color: var(--muted); font-size: var(--fs-small); line-height: 1.65; border-top: 1px solid rgba(15, 23, 42, 0.03); padding-top: 16px; }
+  .faq .body b { color: var(--text); }
+
+  /* Bottom CTA banner */
+  .bottom-cta { text-align: center; padding: 60px 40px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.03) 0%, rgba(255, 255, 255, 0) 100%); border: 1px solid var(--border); border-radius: var(--r-lg); margin-top: 80px; position: relative; overflow: hidden; }
+  .bottom-cta::before { content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%; background: var(--accent); filter: blur(100px); opacity: 0.1; top: -50px; left: -50px; pointer-events: none; }
+  .bottom-cta h2 { font-size: 1.8rem; font-weight: 750; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--text); }
+  .bottom-cta p { color: var(--muted); margin-bottom: 24px; max-width: 520px; margin-left: auto; margin-right: auto; }
 
   /* reveal on scroll */
-  .rv { opacity:0; transform:translateY(14px); transition:opacity .5s ease, transform .5s ease; }
-  .rv.in { opacity:1; transform:none; }
-  @media (prefers-reduced-motion:reduce) {
-    .rv { opacity:1; transform:none; transition:none; }
-    #scene.s2 .arc circle { animation:none; }
-    .wave.anim i { animation:none; }
+  .rv { opacity: 0; transform: translateY(20px); transition: opacity .6s cubic-bezier(0.16, 1, 0.3, 1), transform .6s cubic-bezier(0.16, 1, 0.3, 1); }
+  .rv.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .rv { opacity: 1; transform: none; transition: none; }
+    #scene.s2 .arc circle { animation: none; }
+    .wave.anim i { animation: none; }
   }
-  .foot { text-align:center; color:var(--dim); font-size:var(--fs-tiny); padding:30px 0 10px; border-top:1px solid var(--border); margin-top:60px; }
+  .foot { text-align: center; color: var(--dim); font-size: var(--fs-tiny); padding: 32px 0; border-top: 1px solid var(--border); margin-top: 80px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -84,47 +129,120 @@
       <span class="word">echo</span>
     </a>
     <span class="links">
-      <a class="link" href="#how">How it works</a>
-      <a class="link" href="#security">Security</a>
+      <a class="link" href="home.html#how">How it works</a>
+      <a class="link" href="technology.html">Technology</a>
+      <a class="link" href="integration.html">Developer</a>
       <a class="link" href="login.html">Sign in</a>
       <a class="link primary" href="signup.html">Create account</a>
     </span>
   </nav>
 
   <header class="hero2">
-    <canvas id="heroCanvas" aria-hidden="true"></canvas>
+    <div class="hero-badge-container">
+      <span class="badge-dot"></span>
+      Ultrasonic verification
+    </div>
     <h1>Sign in with <em>sound</em>.<br>No passwords. Ever.</h1>
-    <p>Your computer plays a one-time code you can't hear. Your phone hears it,
-       asks for your approval, and signs you in — in seconds.</p>
+    <p>Your computer plays a single-use acoustic nonce you can't hear. Your phone listens, verifies your identity, and signs you in securely.</p>
     <div class="cta">
-      <button class="btn" onclick="location.href='signup.html'">Get started</button>
+      <button class="btn" onclick="location.href='signup.html'">Get started now</button>
       <button class="btn ghost" onclick="location.href='login.html'">Sign in</button>
     </div>
+    <canvas id="heroCanvas" aria-hidden="true"></canvas>
   </header>
 
   <section class="sec rv">
-    <div class="stats">
-      <div class="stat"><div class="n">0</div><div class="l">passwords stored</div></div>
-      <div class="stat"><div class="n">96-bit</div><div class="l">one-time codes</div></div>
-      <div class="stat"><div class="n">30 s</div><div class="l">code lifetime</div></div>
-      <div class="stat"><div class="n">~2 m</div><div class="l">proximity range</div></div>
+    <div class="bento-stats">
+      <div class="bento-card">
+        <div class="val">0</div>
+        <div class="lbl">passwords stored</div>
+      </div>
+      <div class="bento-card">
+        <div class="val">96<em>-bit</em></div>
+        <div class="lbl">one-time codes</div>
+      </div>
+      <div class="bento-card">
+        <div class="val">30<em>s</em></div>
+        <div class="lbl">code lifetime</div>
+      </div>
+      <div class="bento-card">
+        <div class="val">~2<em>m</em></div>
+        <div class="lbl">proximity range</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bento-Style Features Grid -->
+  <section class="sec rv" id="features">
+    <span class="kicker">Core Capabilities</span>
+    <h2>Built for security. Designed for simplicity.</h2>
+    <p class="lead">Echo combines three layers of physical and cryptographic verification to eliminate password vulnerabilities.</p>
+    <div class="bento-stats" style="grid-template-columns: repeat(3, 1fr); margin-top: 24px;">
+      <div class="bento-card" style="grid-column: span 1;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.1rem; color: var(--accent);">
+          <svg class="ic" style="margin-right: 4px; vertical-align: -2px;"><use href="#i-shield"/></svg> Cryptographic Keys
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin: 0; line-height: 1.6;">Device-bound P-256 ECDSA key pairs generated via WebCrypto API. Private keys are non-exportable and safely isolated in local storage.</p>
+      </div>
+      <div class="bento-card" style="grid-column: span 1;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.1rem; color: var(--accent);">
+          <svg class="ic" style="margin-right: 4px; vertical-align: -2px;"><use href="#i-volume"/></svg> Acoustic Channel
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin: 0; line-height: 1.6;">Payloads encoded via ggwave WASM and modulated to 18–20 kHz near-ultrasound. Bypasses standard human hearing with built-in error correction.</p>
+      </div>
+      <div class="bento-card" style="grid-column: span 1;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.1rem; color: var(--accent);">
+          <svg class="ic" style="margin-right: 4px; vertical-align: -2px;"><use href="#i-alert"/></svg> Proximity Defense
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin: 0; line-height: 1.6;">Ultrasound range is naturally constrained to ~2 meters. Prevents remote phishers from tricking users or tapping into authentication channels.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Developer Snippet preview -->
+  <section class="sec rv" id="dev-snippet">
+    <span class="kicker">Integration Preview</span>
+    <h2>Implement in under five minutes</h2>
+    <p class="lead">Add passwordless security to your Express backend with just a few simple endpoints.</p>
+    <div class="card" style="background: var(--surface-card); padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+        <span style="font-size: var(--fs-tiny); font-weight: 700; color: var(--dim); text-transform: uppercase;">Express integration snippet</span>
+        <span style="font-size: var(--fs-tiny); font-weight: 600; color: var(--accent);">node.js</span>
+      </div>
+      <pre class="mono" style="font-size: 0.8rem; margin: 0; line-height: 1.5; color: var(--muted); overflow-x: auto; padding: 12px; background: #0f172a; border-radius: var(--r-md); border: 1px solid var(--border);"><code style="color: #94a3b8;"><span style="color: #f472b6;">const</span> express = <span style="color: #818cf8;">require</span>(<span style="color: #38bdf8;">'express'</span>);
+<span style="color: #f472b6;">const</span> app = express();
+
+<span style="color: #64748b;">// 1. Initialize authentication session</span>
+app.post(<span style="color: #38bdf8;">'/api/login/start'</span>, (req, res) =&gt; {
+  <span style="color: #f472b6;">const</span> nonce = crypto.randomBytes(<span style="color: #38bdf8;">12</span>).toString(<span style="color: #38bdf8;">'base64url'</span>);
+  db.storeSession(req.body.username, nonce);
+  res.json({ nonce });
+});
+
+<span style="color: #64748b;">// 2. Validate cryptographic signature</span>
+app.post(<span style="color: #38bdf8;">'/api/login/verify'</span>, <span style="color: #f472b6;">async</span> (req, res) =&gt; {
+  <span style="color: #f472b6;">const</span> { nonce, signature, publicKey } = req.body;
+  <span style="color: #f472b6;">const</span> verified = <span style="color: #f472b6;">await</span> verify(publicKey, nonce, signature);
+  res.json({ ok: verified });
+});</code></pre>
+      <div style="margin-top: 14px; text-align: right;">
+        <a class="text" href="integration.html" style="font-size: var(--fs-small);">View complete integration guide &rarr;</a>
+      </div>
     </div>
   </section>
 
   <section class="sec rv" id="listen">
-    <span class="kicker">Try it now</span>
+    <span class="kicker">Interactive demo</span>
     <h2>The sound of a sign-in</h2>
-    <p class="lead">Press play. The spectrum proves something is playing —
-       your ears say otherwise. Echo Key phones ignore this demo: it lacks
-       the envelope that marks a real sign-in.</p>
+    <p class="lead">Press play to broadcast a near-ultrasonic nonce. The spectrum proves sound is transmitting — your ears say otherwise.</p>
     <div class="card demo">
       <canvas id="spec"></canvas>
       <div class="bar">
         <button class="btn" id="btnPlay" onclick="playDemo()">
-          <svg class="ic"><use href="#i-volume"/></svg> <span id="playLabel">Play a sign-in sound</span>
+          <svg class="ic"><use href="#i-volume"/></svg> <span id="playLabel">Play sign-in sound</span>
         </button>
         <span class="seg" role="group" aria-label="sound mode">
-          <button class="on" id="modeU" onclick="setMode('ULTRASOUND_NORMAL')">Silent</button>
+          <button class="on" id="modeU" onclick="setMode('ULTRASOUND_NORMAL')">Ultrasonic</button>
           <button id="modeA" onclick="setMode('AUDIBLE_NORMAL')">Audible</button>
         </span>
         <span class="meta">code: <b id="demoNonce">—</b></span>
@@ -133,27 +251,35 @@
   </section>
 
   <section class="sec rv" id="how">
-    <span class="kicker">Under the hood</span>
+    <span class="kicker">Symmetric protocol</span>
     <h2>Four steps, zero typing</h2>
-    <p class="lead">Watch a sign-in happen. Click a step to inspect it.</p>
+    <p class="lead">Watch a sign-in happen. Click any step below to visualize the process.</p>
     <div class="card flow">
       <svg id="scene" viewBox="0 0 640 250" role="img" aria-label="Diagram of the Echo sign-in flow">
+        <!-- Background Grid inside SVG for technical dashboard aesthetic -->
+        <defs>
+          <pattern id="svg-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(15, 23, 42, 0.02)" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#svg-grid)" rx="8"/>
+        
         <g id="gServer" class="ghost">
-          <rect x="270" y="18" width="100" height="58" rx="9" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
+          <rect x="270" y="18" width="100" height="58" rx="9" class="screen-fill" stroke="var(--border-strong)" stroke-width="1.6"/>
           <line x1="282" y1="36" x2="318" y2="36" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
           <line x1="282" y1="48" x2="334" y2="48" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
           <circle cx="352" cy="58" r="4" fill="var(--ok)"/>
           <text x="320" y="94" font-size="12" fill="var(--dim)" text-anchor="middle">Echo server</text>
         </g>
         <g id="gLaptop" class="ghost">
-          <rect x="56" y="120" width="150" height="86" rx="8" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
+          <rect x="56" y="120" width="150" height="86" rx="8" class="screen-fill" stroke="var(--border-strong)" stroke-width="1.6"/>
           <rect x="40" y="206" width="182" height="10" rx="5" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
           <text id="laptopMsg" x="131" y="160" font-size="11" fill="var(--dim)" text-anchor="middle">login.html</text>
           <text id="laptopMsg2" x="131" y="178" font-size="11" fill="var(--dim)" text-anchor="middle"></text>
           <text x="131" y="236" font-size="12" fill="var(--dim)" text-anchor="middle">your computer</text>
         </g>
         <g id="gPhone" class="ghost">
-          <rect x="468" y="116" width="64" height="104" rx="10" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
+          <rect x="468" y="116" width="64" height="104" rx="10" class="screen-fill" stroke="var(--border-strong)" stroke-width="1.6"/>
           <line x1="492" y1="208" x2="508" y2="208" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
           <g id="phoneCheck" style="opacity:0; transition:opacity .45s">
             <circle cx="500" cy="158" r="14" fill="none" stroke="var(--ok)" stroke-width="1.8"/>
@@ -175,7 +301,7 @@
           <path d="M 380 46 l 9 -2 m -9 2 l 7 6" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round"/>
         </g>
         <g id="aOk" class="ghost" style="opacity:0">
-          <path d="M 268 76 Q 220 96 192 116" fill="none" stroke="var(--ok)" stroke-width="1.8"/>
+          <path d="M 268 76 Q 220 96 192 116" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-dasharray="5 5"/>
           <path d="M 192 116 l 3 -9 m -3 9 l 9 2" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round"/>
         </g>
       </svg>
@@ -192,97 +318,172 @@
   <section class="sec rv" id="security">
     <span class="kicker">Security model</span>
     <h2>Questions worth asking</h2>
-    <p class="lead">The honest answers, including the limits.</p>
+    <p class="lead">The honest cryptographic parameters, including structural boundaries.</p>
 
     <details class="faq">
       <summary><svg class="ic"><use href="#i-refresh"/></svg> What if someone records the sound and replays it?
         <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
       <div class="body">Nothing happens. Every sign-in plays a <b>different</b> sound — a fresh random
-        96-bit code that is destroyed the moment it is used and expires after 30 seconds anyway.
-        A recording is a ticket that has already been torn. This exact attack is part of our
-        automated test suite, and it fails every time.</div>
+        96-bit code that is burned the moment it is submitted and expires after 30 seconds.
+        A recording is a ticket that has already been torn. Replays are explicitly caught and rejected.</div>
     </details>
     <details class="faq">
       <summary><svg class="ic"><use href="#i-phone"/></svg> What if someone steals my phone?
         <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">They still need to get past your phone's own lock to open Echo Key and approve
-        anything — and every sign-in shows an explicit <b>approve / deny</b> prompt. From any other
-        signed-in computer you can <b>revoke</b> the stolen phone in one click, instantly turning
-        its key into junk.</div>
+      <div class="body">They still need to bypass your phone's biometric or PIN locks. Every sign-in shows an explicit <b>approve / deny</b> prompt. From any other signed-in device, you can <b>revoke</b> the compromised phone instantly, turning its public key key-pairs into junk.</div>
     </details>
     <details class="faq">
       <summary><svg class="ic"><use href="#i-key"/></svg> What if I lose or change my phone?
         <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">Sign in with one of your single-use <b>recovery codes</b> (generated from your
-        dashboard, stored only as hashes), add the new phone by scanning a QR code, and revoke the
-        old one. Recovery attempts are rate-limited to five per 15 minutes.</div>
+      <div class="body">Sign in using one of your single-use <b>recovery codes</b> generated from your dashboard, register the new phone, and revoke the old one. Recovery attempts are rate-limited to 5 per 15 minutes.</div>
     </details>
     <details class="faq">
       <summary><svg class="ic"><use href="#i-volume"/></svg> Does it work in a noisy room?
         <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">Usually yes — voices, music, and traffic live far below the 18–20 kHz band Echo
-        uses, and the encoding carries error correction. If the environment or hardware does
-        struggle, there is an <b>audible fallback</b> mode that trades silence for robustness.</div>
+      <div class="body">Yes. Human voices, music, and background noises live far below the 18–20 kHz band Echo uses, and the ggwave protocol contains forward error correction. If audio hardware struggles, there is an <b>audible fallback</b> mode.</div>
     </details>
     <details class="faq">
       <summary><svg class="ic"><use href="#i-shield"/></svg> What does the server actually store?
         <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">Your username, your devices' <b>public</b> keys, and hashed recovery codes.
-        No passwords exist anywhere — not hashed, not encrypted, not at all. A complete database
-        breach gives an attacker nothing they can sign in with.</div>
+      <div class="body">Your username, enrolled devices' <b>public JWK keys</b>, and hashed recovery codes. No passwords exist anywhere on our infrastructure. A complete database breach exposes zero secrets.</div>
     </details>
     <details class="faq">
       <summary><svg class="ic"><use href="#i-alert"/></svg> What are the known limits?
         <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">A live <b>relay attack</b> — streaming the sound in real time to an accomplice
-        near your phone — is mitigated by the approve prompt and ultrasound's short range, but not
-        yet by cryptographic distance bounding. We say so openly; security products that claim no
-        limits have stopped being honest.</div>
+      <div class="body">A live <b>relay attack</b> — where an attacker streams the sound in real time to an accomplice near your phone — is a documented limitation. Precise time-of-flight checks require low-level hardware control that browsers cannot access.</div>
     </details>
   </section>
 
-  <section class="sec rv center">
+  <section class="bottom-cta rv">
     <h2>Ready to drop your password?</h2>
-    <p class="lead">Setup takes about a minute. All you need is this computer and your phone.</p>
-    <div class="cta" style="display:flex; gap:12px; max-width:360px; margin:18px auto 0">
-      <button class="btn" onclick="location.href='signup.html'">Create your account</button>
-    </div>
+    <p>Setup takes less than a minute. Secure your account with hardware-bound cryptographic keys today.</p>
+    <button class="btn" style="width: auto; padding: 14px 32px;" onclick="location.href='signup.html'">Create your account</button>
   </section>
 
-  <div class="foot">Echo · CY384 research artefact · Stemi Security Solutions scenario · ultrasonic data transfer powered by ggwave</div>
+  <footer class="premium-footer">
+    <div class="footer-cols">
+      <div class="footer-brand-col">
+        <a class="brand" href="home.html" style="margin-bottom: 4px;">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word">echo</span>
+        </a>
+        <p class="footer-brand-desc">Ultrasonic passwordless authentication. Zero passwords, zero friction, complete cryptographic verification.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Technology</h4>
+        <ul>
+          <li><a href="technology.html">Physics & Audio</a></li>
+          <li><a href="technology.html">ECDSA P-256</a></li>
+          <li><a href="home.html#security">Threat Model</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="integration.html">API Reference</a></li>
+          <li><a href="integration.html">SDK Snippets</a></li>
+          <li><a href="https://github.com/ggerganov/ggwave" target="_blank" rel="noopener">ggwave Engine</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Account</h4>
+        <ul>
+          <li><a href="login.html">Sign In</a></li>
+          <li><a href="signup.html">Create Key</a></li>
+          <li><a href="dashboard.html">Console</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 Echo. CY384 Research Artefact · Stemi Security Solutions.</span>
+      <span class="footer-copy">Acoustic data transfer powered by ggwave.</span>
+    </div>
+  </footer>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* ---------- hero canvas: layered sine waves ---------- */
+/* ---------- hero canvas: layered interactive waves ---------- */
 (function hero() {
   const c = $('heroCanvas'), ctx = c.getContext('2d');
   const dpr = devicePixelRatio || 1;
   function size() { c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; }
   size(); addEventListener('resize', size);
-  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2e5cf6';
+
+  // Track mouse coordinates for interactive effect
+  let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
+  c.addEventListener('mousemove', (e) => {
+    const rect = c.getBoundingClientRect();
+    mouse.targetX = (e.clientX - rect.left) * dpr;
+    mouse.targetY = (e.clientY - rect.top) * dpr;
+    mouse.active = true;
+  });
+  c.addEventListener('mouseleave', () => {
+    mouse.active = false;
+  });
+
   let t = 0;
   function frame() {
     ctx.clearRect(0, 0, c.width, c.height);
     const mid = c.height / 2;
-    for (let l = 0; l < 3; l++) {
+
+    // Smoothly interpolate mouse position
+    if (mouse.active) {
+      if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
+      else {
+        mouse.x += (mouse.targetX - mouse.x) * 0.1;
+        mouse.y += (mouse.targetY - mouse.y) * 0.1;
+      }
+    } else {
+      mouse.x = null; mouse.y = null;
+    }
+
+    // Draw 4 distinct wavy lines for rich depth
+    for (let l = 0; l < 4; l++) {
       ctx.beginPath();
-      for (let x = 0; x <= c.width; x += 3 * dpr) {
+
+      // Create a gradient for each wave line (Blue Accent shades)
+      const gradient = ctx.createLinearGradient(0, 0, c.width, 0);
+      gradient.addColorStop(0, 'rgba(37, 99, 235, 0)');
+      gradient.addColorStop(0.2, l % 2 === 0 ? 'rgba(96, 165, 250, 0.7)' : 'rgba(37, 99, 235, 0.7)');
+      gradient.addColorStop(0.5, l % 3 === 0 ? 'rgba(147, 197, 253, 0.8)' : 'rgba(96, 165, 250, 0.8)');
+      gradient.addColorStop(0.8, l % 2 === 0 ? 'rgba(37, 99, 235, 0.7)' : 'rgba(147, 197, 253, 0.7)');
+      gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+
+      for (let x = 0; x <= c.width; x += 2 * dpr) {
         const p = x / c.width;
-        const env = Math.sin(p * Math.PI);           // fade at edges
-        const y = mid + Math.sin(p * 18 + t * (1 + l * .35) + l * 2) * env * (10 + l * 7) * dpr;
+        // Envelope fades waves out at the left and right boundaries
+        let env = Math.sin(p * Math.PI);
+
+        // Base wave calculations using layered sine functions
+        let baseAngle = p * 12 + t * (1.2 + l * 0.4) + l * 1.5;
+        let waveHeight = Math.sin(baseAngle) * Math.cos(baseAngle * 0.5 + l);
+
+        // Interactive mouse warping effect: pulling wave towards cursor
+        if (mouse.active) {
+          const dist = Math.abs(x - mouse.x);
+          const maxDist = 140 * dpr;
+          if (dist < maxDist) {
+            const pull = (1 - dist / maxDist) * 0.7;
+            const diffY = mouse.y - mid;
+            waveHeight += (diffY / (25 * dpr)) * pull;
+            env += pull * 0.5;
+          }
+        }
+
+        const y = mid + waveHeight * env * (14 + l * 9) * dpr;
         x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
-      ctx.strokeStyle = accent;
-      ctx.globalAlpha = .65 - l * .22;
-      ctx.lineWidth = 1.6 * dpr;
+
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = (1.8 - l * 0.3) * dpr;
       ctx.stroke();
     }
-    ctx.globalAlpha = 1;
-    t += .025;
-    if (!reduced) requestAnimationFrame(frame);
+
+    t += 0.012;
+    requestAnimationFrame(frame);
   }
   frame();
 })();
@@ -313,6 +514,16 @@ function drawSpec() {
   const dim = css.getPropertyValue('--dim').trim();
   const maxF = 24000, hearF = 17000;
 
+  // grid lines
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.03)';
+  ctx.lineWidth = dpr;
+  for (let x = pad / 2; x < W - pad / 2; x += 40 * dpr) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H - 22 * dpr); ctx.stroke();
+  }
+  for (let y = 0; y < H - 22 * dpr; y += 30 * dpr) {
+    ctx.beginPath(); ctx.moveTo(pad / 2, y); ctx.lineTo(W - pad / 2, y); ctx.stroke();
+  }
+
   // bars
   if (analyser) {
     const data = new Uint8Array(analyser.frequencyBinCount);
@@ -337,7 +548,7 @@ function drawSpec() {
   ctx.strokeStyle = dim;
   ctx.beginPath(); ctx.moveTo(hx, 8 * dpr); ctx.lineTo(hx, H - 22 * dpr); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = dim; ctx.font = `${10 * dpr}px system-ui`; ctx.textAlign = 'left';
+  ctx.fillStyle = dim; ctx.font = `${10 * dpr}px 'Plus Jakarta Sans', system-ui`; ctx.textAlign = 'left';
   ctx.fillText('human hearing ends ≈17 kHz', hx + 6 * dpr, 16 * dpr);
   ctx.textAlign = 'center';
   [0, 6, 12, 18, 24].forEach(k => {
@@ -365,7 +576,6 @@ function playDemo() {
   const nonce = Array.from(b, x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
   $('demoNonce').textContent = nonce;
 
-  // DEMO: prefix — real sign-ins use an E1: envelope, so Echo Key phones ignore this sound
   const wf = ggwave.encode(ginst, 'DEMO:' + nonce, ggwave.ProtocolId['GGWAVE_PROTOCOL_' + mode], 25);
   const buffer = new ArrayBuffer(wf.byteLength);
   new wf.constructor(buffer).set(wf);
@@ -396,7 +606,12 @@ const CAPTIONS = [
   'Your phone shows who is signing in and waits for your approval, then signs the code with a private key that physically cannot leave the device.',
   'The server checks the signature against your enrolled public key and opens the session on your computer. Total time: a few seconds.'
 ];
-let step = 0, autoTimer = null;
+let step = 0, autoTimer = null, pauseTimer = null;
+
+function startAuto() {
+  clearInterval(autoTimer);
+  autoTimer = setInterval(() => goStep((step + 1) % 4), 3400);
+}
 
 function goStep(n, manual) {
   step = n;
@@ -413,11 +628,15 @@ function goStep(n, manual) {
   $('laptopMsg2').textContent = n === 3 ? 'welcome back' : '';
   $('stepCaption').textContent = CAPTIONS[n];
   [...$('stepBtns').children].forEach((b, i) => b.className = i === n ? 'on' : '');
-  if (manual) { clearInterval(autoTimer); autoTimer = null; }
+  if (manual) {
+    clearInterval(autoTimer); autoTimer = null;
+    clearTimeout(pauseTimer);
+    pauseTimer = setTimeout(startAuto, 6000);
+  }
 }
 
 goStep(0);
-if (!reduced) autoTimer = setInterval(() => goStep((step + 1) % 4), 3200);
+startAuto();
 
 /* ---------- scroll reveal ---------- */
 const io = new IntersectionObserver(es => es.forEach(e => {

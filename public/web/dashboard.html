@@ -3,149 +3,475 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Echo — dashboard</title>
+<title>Echo — Your Account Dashboard</title>
+<meta name="description" content="Manage your Echo passwordless authentication devices, backup password, and security settings.">
 <link rel="stylesheet" href="../echo.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <script src="../qrcode.js"></script>
+<style>
+  /* ── Dashboard-specific styles ── */
+  .dash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 0 2px;
+  }
+  .dash-header h1 {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin: 0;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .dash-header h1 .wave { height: 24px; }
+  .dash-header p {
+    color: var(--muted);
+    font-size: var(--fs-small);
+    margin: 6px 0 0;
+    font-weight: 500;
+  }
+  .greeting-sub {
+    color: var(--muted);
+    font-size: var(--fs-small);
+    font-weight: 500;
+    margin: 2px 0 0 0;
+  }
+
+  /* Device row refined */
+  .device-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 12px;
+    border-radius: var(--r-md);
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.15s;
+  }
+  .device-row:last-child { border-bottom: none; }
+  .device-row:hover { background: rgba(37, 99, 235, 0.02); }
+  .device-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(37, 99, 235, 0.06);
+    color: var(--accent);
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    flex-shrink: 0;
+  }
+  .device-info { flex: 1; min-width: 0; }
+  .device-name {
+    font-weight: 700;
+    font-size: var(--fs-body);
+    color: var(--text);
+  }
+  .device-meta {
+    font-size: var(--fs-tiny);
+    color: var(--dim);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+  .btn.outline-red {
+    background: transparent;
+    color: var(--bad);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    box-shadow: none;
+    padding: 7px 14px;
+    font-size: var(--fs-tiny);
+  }
+  .btn.outline-red:hover {
+    background: var(--bad-soft);
+    border-color: rgba(220, 38, 38, 0.3);
+  }
+
+  /* Activity row refined */
+  .activity-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 12px;
+    border-radius: var(--r-md);
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.15s;
+  }
+  .activity-row:last-child { border-bottom: none; }
+  .activity-row:hover { background: rgba(37, 99, 235, 0.02); }
+  .activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .activity-icon.ok {
+    background: rgba(5, 150, 105, 0.08);
+    color: var(--ok);
+    border: 1px solid rgba(5, 150, 105, 0.15);
+  }
+  .activity-icon.bad {
+    background: rgba(220, 38, 38, 0.08);
+    color: var(--bad);
+    border: 1px solid rgba(220, 38, 38, 0.15);
+  }
+  .activity-info { flex: 1; min-width: 0; }
+  .activity-title {
+    font-weight: 700;
+    font-size: var(--fs-small);
+    color: var(--text);
+  }
+  .activity-meta {
+    font-size: var(--fs-tiny);
+    color: var(--dim);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+  .activity-badge {
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .activity-badge.ok {
+    background: rgba(5, 150, 105, 0.08);
+    color: #047857;
+    border: 1px solid rgba(5, 150, 105, 0.12);
+  }
+  .activity-badge.bad {
+    background: rgba(220, 38, 38, 0.08);
+    color: #b91c1c;
+    border: 1px solid rgba(220, 38, 38, 0.12);
+  }
+
+  /* Security item refined */
+  .security-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 12px;
+    border-radius: var(--r-md);
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.15s;
+  }
+  .security-item:last-child { border-bottom: none; }
+  .security-item:hover { background: rgba(37, 99, 235, 0.02); }
+  .security-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .security-icon.ok {
+    background: rgba(5, 150, 105, 0.08);
+    color: var(--ok);
+    border: 1px solid rgba(5, 150, 105, 0.15);
+  }
+  .security-icon.warn {
+    background: rgba(217, 119, 6, 0.08);
+    color: #d97706;
+    border: 1px solid rgba(217, 119, 6, 0.15);
+  }
+  .security-info { flex: 1; min-width: 0; }
+  .security-title {
+    font-weight: 700;
+    font-size: var(--fs-small);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .security-desc {
+    font-size: var(--fs-tiny);
+    color: var(--dim);
+    margin-top: 3px;
+    font-weight: 500;
+    line-height: 1.55;
+  }
+  .status-tag {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+  .status-tag.ok {
+    background: rgba(5, 150, 105, 0.08);
+    color: #047857;
+    border: 1px solid rgba(5, 150, 105, 0.1);
+  }
+  .status-tag.warn {
+    background: rgba(217, 119, 6, 0.08);
+    color: #b45309;
+    border: 1px solid rgba(217, 119, 6, 0.1);
+  }
+
+  /* No-items state */
+  .empty-state-inline {
+    text-align: center;
+    padding: 28px 16px;
+    color: var(--dim);
+    font-size: var(--fs-small);
+    font-weight: 500;
+  }
+
+  /* Copy feedback */
+  .btn.copied {
+    color: var(--ok) !important;
+    border-color: rgba(5, 150, 105, 0.2) !important;
+  }
+</style>
 </head>
 <body>
 <script src="../icons.js"></script>
 <div class="wrap wide">
   <nav class="nav">
     <a class="brand" href="home.html">
-      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
       <span class="word">echo</span>
     </a>
     <span class="links">
+      <a class="link" href="home.html#how">How it works</a>
+      <a class="link" href="technology.html">Technology</a>
+      <a class="link" href="integration.html">Developer</a>
       <span class="pill" style="margin:0"><svg class="ic"><use href="#i-user"/></svg> <b id="navUser"></b></span>
       <a class="link" href="#" onclick="logout(); return false"><svg class="ic"><use href="#i-logout"/></svg> Sign out</a>
     </span>
   </nav>
 
-  <div class="banner warn" id="codesBanner" style="display:none">
+  <!-- Dashboard header -->
+  <div class="dash-header">
+    <div>
+      <h1>
+        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        Welcome back, <span id="headerUser"></span>
+      </h1>
+      <p class="greeting-sub">Here's an overview of your account security and devices.</p>
+    </div>
+  </div>
+
+  <!-- Backup password not set banner -->
+  <div class="banner warn" id="pwBanner" style="display:none">
     <svg class="ic" style="flex:none; margin-top:2px"><use href="#i-alert"/></svg>
-    <div><b>No recovery codes yet.</b> If you lose your phone, you lose your account.
-    Generate codes now and keep them somewhere safe.
-    <a class="text" href="#" onclick="generateCodes(); return false">Generate recovery codes</a></div>
+    <div><b>No backup password set.</b> If you lose your phone, you won't be able to sign in.
+    Set a backup password now so you always have a way back in.</div>
   </div>
 
+  <!-- KPI stat cards -->
   <div class="kpis">
-    <div class="kpi"><div class="n" id="kDevices">–</div><div class="l">Enrolled devices</div></div>
-    <div class="kpi"><div class="n" id="kCodes">–</div><div class="l">Recovery codes left</div></div>
-    <div class="kpi"><div class="n" id="kLogins">–</div><div class="l">Sign-ins recorded</div></div>
+    <div class="kpi blue">
+      <div class="kpi-icon"><svg class="ic lg"><use href="#i-phone"/></svg></div>
+      <div class="kpi-content">
+        <div class="n" id="kDevices">–</div>
+        <div class="l">Enrolled devices</div>
+      </div>
+    </div>
+    <div class="kpi green" id="kpiPwCard">
+      <div class="kpi-icon"><svg class="ic lg"><use href="#i-lock"/></svg></div>
+      <div class="kpi-content">
+        <div class="n" id="kPwStatus">–</div>
+        <div class="l">Backup password</div>
+      </div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-icon"><svg class="ic lg"><use href="#i-activity"/></svg></div>
+      <div class="kpi-content">
+        <div class="n" id="kLogins">–</div>
+        <div class="l">Sign-ins recorded</div>
+      </div>
+    </div>
   </div>
 
+  <!-- Main grid -->
   <div class="grid">
+
+    <!-- Devices card -->
     <div class="card">
       <div class="card-head">
         <h2><svg class="ic"><use href="#i-phone"/></svg> Devices</h2>
         <button class="btn small ghost" onclick="addDevice()"><svg class="ic"><use href="#i-plus"/></svg> Add device</button>
       </div>
-      <p class="sub">Phones that can approve your sign-ins. Changed phones?
-         Add the new one, then revoke the old.</p>
-      <ul class="list" id="deviceList"></ul>
+      <p class="sub">Phones that can approve your sign-ins. Changed phones? Add the new one, then revoke the old.</p>
+      <div id="deviceList"></div>
       <div id="addDeviceBox" style="display:none">
         <div class="divider">scan with the new phone</div>
         <div class="qr" id="deviceQr"></div>
         <div class="center"><span class="pill mono" id="deviceLink"></span></div>
-        <div class="status" id="addStatus">Waiting for the new phone… this link expires in 10 minutes.</div>
+        <div class="status" id="addStatus" style="animation: blink 1.5s infinite">Waiting for the new phone… this link expires in 10 minutes.</div>
       </div>
     </div>
 
+    <!-- Backup password card -->
     <div class="card">
       <div class="card-head">
-        <h2><svg class="ic"><use href="#i-key"/></svg> Recovery codes</h2>
-        <button class="btn small ghost" onclick="generateCodes()"><svg class="ic"><use href="#i-refresh"/></svg> <span id="genLabel">Generate</span></button>
+        <h2><svg class="ic"><use href="#i-lock"/></svg> Backup password</h2>
       </div>
-      <p class="sub">Your way back in without a phone. Each code works once.
-         Regenerating replaces all old codes.</p>
-      <div class="status" id="codesStatus" style="text-align:left; margin:0"></div>
-      <div id="codesBox" style="display:none">
-        <div class="codes" id="codesGrid"></div>
-        <div class="banner info" style="margin:10px 0 0">
-          <svg class="ic" style="flex:none; margin-top:2px"><use href="#i-alert"/></svg>
-          <div>These are shown <b>only once</b>. Save them now — print them or store them in a password manager.</div>
+      <p class="sub">Your backup way to sign in if your phone is unavailable. Keep this password safe — it's the only way back in without your phone.</p>
+      <div id="pwStatusText" style="font-size:var(--fs-small); color:var(--muted); margin-bottom:16px"></div>
+
+      <!-- Change password form -->
+      <div id="pwForm">
+        <div id="currentPwWrap" style="display:none">
+          <label for="currentPw">Current password</label>
+          <div class="pass-wrap">
+            <input type="password" id="currentPw" placeholder="Enter current password" autocomplete="current-password">
+            <button type="button" class="eye-btn" onclick="toggleEye(this)"><svg class="ic"><use href="#i-eye"/></svg></button>
+          </div>
         </div>
-        <div class="row">
-          <button class="btn small ghost" onclick="copyCodes()"><svg class="ic"><use href="#i-copy"/></svg> Copy all</button>
-          <button class="btn small ghost" onclick="downloadCodes()"><svg class="ic"><use href="#i-download"/></svg> Download .txt</button>
+        <label for="newPw">New password</label>
+        <div class="pass-wrap">
+          <input type="password" id="newPw" placeholder="Enter new password" autocomplete="new-password" oninput="checkStrength()">
+          <button type="button" class="eye-btn" onclick="toggleEye(this)"><svg class="ic"><use href="#i-eye"/></svg></button>
         </div>
+        <div class="strength-bar" id="strengthBar"><span></span><span></span><span></span><span></span></div>
+        <div class="strength-label" id="strengthLabel"></div>
+        <label for="confirmPw">Confirm new password</label>
+        <div class="pass-wrap">
+          <input type="password" id="confirmPw" placeholder="Confirm new password" autocomplete="new-password">
+          <button type="button" class="eye-btn" onclick="toggleEye(this)"><svg class="ic"><use href="#i-eye"/></svg></button>
+        </div>
+        <div class="hint" id="pwHint"></div>
+        <button class="btn" id="btnChangePw" onclick="changePassword()" style="margin-top:18px">
+          <svg class="ic"><use href="#i-lock"/></svg>
+          <span id="pwBtnLabel">Set backup password</span>
+        </button>
       </div>
     </div>
 
+    <!-- Recent activity card -->
     <div class="card span2">
       <h2><svg class="ic"><use href="#i-activity"/></svg> Recent activity</h2>
       <p class="sub">Every sign-in attempt against your account, successful or not.</p>
-      <ul class="list" id="activityList"></ul>
+      <div id="activityList"></div>
     </div>
 
+    <!-- Security status card -->
     <div class="card span2">
-      <h2><svg class="ic"><use href="#i-shield-check"/></svg> System security status</h2>
+      <h2><svg class="ic"><use href="#i-shield-check"/></svg> Security status</h2>
       <p class="sub">Why this account has no password to steal.</p>
-      <ul class="list">
-        <li><span class="badge ok"><svg class="ic"><use href="#i-check"/></svg> active</span>
-            <div class="grow"><div class="t1">One-time sound codes</div>
-            <div class="t2">Every sign-in plays a unique random 96-bit code — single-use, 30-second expiry. Recording it is useless.</div></div></li>
-        <li><span class="badge ok"><svg class="ic"><use href="#i-check"/></svg> active</span>
-            <div class="grow"><div class="t1">Device-bound keys</div>
-            <div class="t2">ECDSA P-256 private keys are generated non-extractable on your phone and physically cannot be copied off it.</div></div></li>
-        <li><span class="badge ok"><svg class="ic"><use href="#i-check"/></svg> active</span>
-            <div class="grow"><div class="t1">User consent</div>
-            <div class="t2">Your phone never signs silently — every sign-in shows an approve / deny prompt.</div></div></li>
-        <li><span class="badge ok"><svg class="ic"><use href="#i-check"/></svg> active</span>
-            <div class="grow"><div class="t1">Rate-limited recovery</div>
-            <div class="t2">Recovery codes are stored only as hashes; five failed attempts locks recovery for 15 minutes.</div></div></li>
-        <li><span class="badge warn"><svg class="ic"><use href="#i-alert"/></svg> known limit</span>
-            <div class="grow"><div class="t1">Relay attacks</div>
-            <div class="t2">An attacker streaming live audio to a remote accomplice's phone is mitigated by consent prompts and short range, not yet by distance bounding.</div></div></li>
-      </ul>
+      <div id="securityList">
+        <div class="security-item">
+          <div class="security-icon ok"><svg class="ic"><use href="#i-volume"/></svg></div>
+          <div class="security-info">
+            <div class="security-title">One-time sound codes <span class="status-tag ok">active</span></div>
+            <div class="security-desc">Every sign-in plays a unique random code — single-use, 30-second expiry. Recording it is useless.</div>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon ok"><svg class="ic"><use href="#i-lock"/></svg></div>
+          <div class="security-info">
+            <div class="security-title">Device-bound keys <span class="status-tag ok">active</span></div>
+            <div class="security-desc">Private keys are generated on your phone and physically cannot be copied off it.</div>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon ok"><svg class="ic"><use href="#i-user"/></svg></div>
+          <div class="security-info">
+            <div class="security-title">User consent <span class="status-tag ok">active</span></div>
+            <div class="security-desc">Your phone never signs silently — every sign-in shows an approve / deny prompt.</div>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon ok"><svg class="ic"><use href="#i-shield"/></svg></div>
+          <div class="security-info">
+            <div class="security-title">Rate-limited recovery <span class="status-tag ok">active</span></div>
+            <div class="security-desc">Recovery codes are stored only as hashes; five failed attempts locks recovery for 15 minutes.</div>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon warn"><svg class="ic"><use href="#i-alert"/></svg></div>
+          <div class="security-info">
+            <div class="security-title">Relay attacks <span class="status-tag warn">known limit</span></div>
+            <div class="security-desc">An attacker streaming live audio to a remote phone is mitigated by consent prompts and short range, not yet by distance bounding.</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-let lastCodes = [], pollTimer = null, me = null;
+let pollTimer = null, me = null;
 
 async function load() {
   const r = await fetch('/api/me');
   if (!r.ok) { location.href = 'login.html'; return; }
   me = await r.json();
+
   $('navUser').textContent = me.username;
+  $('headerUser').textContent = me.username;
   $('kDevices').textContent = me.devices.length;
-  $('kCodes').textContent = me.recoveryUnused;
   $('kLogins').textContent = me.recentLogins.length;
-  $('codesBanner').style.display = me.recoveryUnused === 0 ? '' : 'none';
-  $('genLabel').textContent = me.recoveryUnused === 0 ? 'Generate' : 'Regenerate';
-  $('codesStatus').textContent = me.recoveryUnused > 0
-    ? me.recoveryUnused + ' unused codes on file (hashes only — not viewable).' : '';
+
+  // Backup password status
+  const hasPw = me.hasPassword;
+  $('kPwStatus').textContent = hasPw ? 'Set' : 'Not set';
+  $('kpiPwCard').className = hasPw ? 'kpi green' : 'kpi orange';
+  $('pwBanner').style.display = hasPw ? 'none' : '';
+  $('pwStatusText').textContent = hasPw
+    ? 'Your backup password is active. You can change it below.'
+    : 'You don\'t have a backup password yet. Set one below.';
+  $('pwBtnLabel').textContent = hasPw ? 'Change password' : 'Set backup password';
+  $('currentPwWrap').style.display = hasPw ? '' : 'none';
   renderDevices();
   renderActivity();
 }
 
 function renderDevices() {
-  $('deviceList').innerHTML = me.devices.map(d => `
-    <li>
-      <span class="badge info"><svg class="ic"><use href="#i-phone"/></svg></span>
-      <div class="grow">
-        <div class="t1">${esc(d.name)}</div>
-        <div class="t2">enrolled ${new Date(d.created_at).toLocaleDateString()} · id ${d.id}</div>
+  const el = $('deviceList');
+  if (!me.devices.length) {
+    el.innerHTML = '<div class="empty-state-inline">No devices enrolled yet — add one before signing out!</div>';
+    return;
+  }
+  el.innerHTML = me.devices.map(d => `
+    <div class="device-row">
+      <div class="device-icon"><svg class="ic"><use href="#i-phone"/></svg></div>
+      <div class="device-info">
+        <div class="device-name">${esc(d.name)}</div>
+        <div class="device-meta">Enrolled ${new Date(d.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</div>
       </div>
-      <button class="btn small red" onclick="revoke('${d.id}', '${esc(d.name)}')">Revoke</button>
-    </li>`).join('') || '<li><div class="t2">No devices — add one before signing out!</div></li>';
+      <button class="btn small outline-red" onclick="revoke('${d.id}', '${esc(d.name)}')">Revoke</button>
+    </div>`).join('');
 }
 
 function renderActivity() {
-  $('activityList').innerHTML = me.recentLogins.map(l => `
-    <li>
-      <span class="badge ${l.ok ? 'ok' : 'bad'}">
-        <svg class="ic"><use href="#i-${l.ok ? 'check' : 'x'}"/></svg> ${l.ok ? 'success' : 'failed'}
-      </span>
-      <div class="grow">
-        <div class="t1">${l.method === 'sound' ? 'Sound sign-in' : 'Recovery code sign-in'}
-          ${l.device_name ? '· ' + esc(l.device_name) : ''}</div>
-        <div class="t2">${l.detail ? esc(l.detail) + ' · ' : ''}${new Date(l.created_at).toLocaleString()}</div>
+  const el = $('activityList');
+  if (!me.recentLogins.length) {
+    el.innerHTML = '<div class="empty-state-inline">No sign-in activity yet.</div>';
+    return;
+  }
+  el.innerHTML = me.recentLogins.map(l => {
+    const method = l.method === 'sound' ? 'Sound sign-in' : 'Password sign-in';
+    const device = l.device_name ? ' · ' + esc(l.device_name) : '';
+    const time = new Date(l.created_at).toLocaleString(undefined, {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    return `
+    <div class="activity-row">
+      <div class="activity-icon ${l.ok ? 'ok' : 'bad'}">
+        <svg class="ic"><use href="#i-${l.ok ? 'check' : 'x'}"/></svg>
       </div>
-    </li>`).join('') || '<li><div class="t2">No activity yet.</div></li>';
+      <div class="activity-info">
+        <div class="activity-title">${method}${device}</div>
+        <div class="activity-meta">${l.detail ? esc(l.detail) + ' · ' : ''}${time}</div>
+      </div>
+      <span class="activity-badge ${l.ok ? 'ok' : 'bad'}">${l.ok ? 'success' : 'failed'}</span>
+    </div>`;
+  }).join('');
 }
 
 async function revoke(id, name) {
@@ -179,27 +505,76 @@ async function addDevice() {
   }, 2000);
 }
 
-async function generateCodes() {
-  if (me && me.recoveryUnused > 0 &&
-      !confirm('Regenerating replaces ALL existing codes. Continue?')) return;
-  const r = await fetch('/api/recovery/generate', { method: 'POST' });
-  if (!r.ok) return;
-  lastCodes = (await r.json()).codes;
-  $('codesGrid').innerHTML = lastCodes.map(c => '<div>' + c + '</div>').join('');
-  $('codesBox').style.display = '';
-  $('codesBanner').style.display = 'none';
-  $('codesStatus').textContent = '';
-  fetch('/api/me').then(x => x.json()).then(m => { me = m; $('kCodes').textContent = m.recoveryUnused; $('genLabel').textContent = 'Regenerate'; });
+// ---- Backup password management ----
+function checkStrength() {
+  const pw = $('newPw').value;
+  let level = 0;
+  if (pw.length >= 8) level++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) level++;
+  if (/\d/.test(pw)) level++;
+  if (/[^A-Za-z0-9]/.test(pw)) level++;
+  $('strengthBar').setAttribute('data-level', pw ? level : 0);
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  const el = $('strengthLabel');
+  el.textContent = pw ? labels[level] : '';
+  el.className = 'strength-label' + (pw ? ' s' + level : '');
 }
 
-function copyCodes() { navigator.clipboard.writeText(codesText()); }
-function downloadCodes() {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([codesText()], { type: 'text/plain' }));
-  a.download = 'echo-recovery-codes.txt';
-  a.click();
+function toggleEye(btn) {
+  const inp = btn.previousElementSibling;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = '<svg class="ic"><use href="#i-' + (show ? 'eye-off' : 'eye') + '"/></svg>';
 }
-const codesText = () => 'Echo recovery codes for ' + me.username + ' — each works once\n\n' + lastCodes.join('\n') + '\n';
+
+async function changePassword() {
+  const hint = $('pwHint');
+  const currentPw = $('currentPw').value;
+  const newPw = $('newPw').value;
+  const confirmPw = $('confirmPw').value;
+
+  hint.className = 'hint';
+  hint.textContent = '';
+
+  if (!newPw || newPw.length < 8) {
+    hint.className = 'hint bad';
+    hint.textContent = 'Password must be at least 8 characters.';
+    return;
+  }
+  if (newPw !== confirmPw) {
+    hint.className = 'hint bad';
+    hint.textContent = 'Passwords do not match.';
+    return;
+  }
+
+  $('btnChangePw').disabled = true;
+  const body = { newPassword: newPw };
+  if (me.hasPassword) body.currentPassword = currentPw;
+
+  const r = await fetch('/api/password/change', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(() => null);
+
+  $('btnChangePw').disabled = false;
+
+  if (!r || !r.ok) {
+    const err = r ? (await r.json().catch(() => ({}))).error : 'Could not reach the server.';
+    hint.className = 'hint bad';
+    hint.textContent = err || 'Something went wrong.';
+    return;
+  }
+
+  hint.className = 'hint ok';
+  hint.textContent = 'Password updated successfully!';
+  $('currentPw').value = '';
+  $('newPw').value = '';
+  $('confirmPw').value = '';
+  $('strengthBar').setAttribute('data-level', 0);
+  $('strengthLabel').textContent = '';
+  load();
+}
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 

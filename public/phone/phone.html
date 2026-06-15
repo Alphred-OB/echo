@@ -2,107 +2,225 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Echo Key</title>
-<link rel="stylesheet" href="../echo.css">
+<link rel="stylesheet" href="phone.css">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#2e5cf6">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Echo Key">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="../ggwave.js"></script>
 </head>
 <body>
 <script src="../icons.js"></script>
-<div class="wrap">
-  <nav class="nav">
+
+<!-- ══════════════════════════════════════════
+     SAFE-AREA SHELL
+══════════════════════════════════════════ -->
+<div class="shell">
+
+  <!-- Top bar -->
+  <header class="topbar">
     <a class="brand" href="phone.html">
-      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-      <span class="word">echo <span style="color:var(--dim); font-weight:500">key</span></span>
+      <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="word">echo <span>key</span></span>
     </a>
-    <span class="links"><span class="badge info" id="installBadge" style="display:none; cursor:pointer">Install app</span></span>
-  </nav>
-
-  <div class="card center" id="enrollCard" style="display:none">
-    <div class="bigico"><svg class="ic lg"><use href="#i-key"/></svg></div>
-    <h2 style="justify-content:center">Make this device your key</h2>
-    <p class="sub">A private key will be generated on this device.
-       It physically cannot be copied off it.</p>
-    <label for="deviceName" style="text-align:left">Device name</label>
-    <input type="text" id="deviceName" placeholder="e.g. Kwame's phone">
-    <button class="btn" id="btnEnroll" onclick="enroll()">Make this my key</button>
-    <div class="status" id="enrollStatus"></div>
-  </div>
-
-  <div class="card center" id="keyCard" style="display:none">
-    <div class="wave big" id="listenWave" style="justify-content:center; display:inline-flex"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <h2 style="justify-content:center" id="keyTitle">Ready</h2>
-    <p class="sub" style="margin-bottom:4px; display:flex; flex-wrap:wrap; justify-content:center; gap:4px">
-      <span class="pill"><svg class="ic"><use href="#i-user"/></svg> <b id="whoami"></b></span>
-      <span class="pill"><svg class="ic"><use href="#i-phone"/></svg> <span id="devname"></span></span>
-      <span class="pill" style="opacity:0.75; font-size:0.75rem; border:1px dashed var(--border)"><svg class="ic"><use href="#i-activity"/></svg> <span id="serverHost"></span></span>
-    </p>
-    <button class="btn green" id="btnListen" onclick="toggleListen()">
-      <svg class="ic"><use href="#i-mic"/></svg> <span id="listenLabel">Start listening</span>
+    <button class="install-badge" id="installBadge" style="display:none" type="button">
+      <svg class="ic sm"><use href="#i-download"/></svg>
+      Install app
     </button>
-    <div class="status" id="listenStatus">Keep this page open near the computer you're signing in on.</div>
-    <details>
-      <summary>No microphone? Enter the code manually</summary>
-      <input type="text" id="manualNonce" class="mono" placeholder="code from the laptop's debug log" style="margin-top:8px">
-      <button class="btn ghost" onclick="manualApprove()">Continue</button>
-    </details>
-  </div>
+  </header>
 
-  <div class="card approve-card center" id="approveCard" style="display:none">
-    <div class="bigico"><svg class="ic lg"><use href="#i-bell"/></svg></div>
-    <h2 style="justify-content:center">Sign-in request</h2>
-    <div class="who" id="approveWho"></div>
-    <div class="nonce" id="matchNum" style="font-size:1.6rem; font-weight:700; letter-spacing:4px; max-width:140px; margin:10px auto"></div>
-    <p class="sub">A computer near you wants to sign in to your account.
-       <b>Check this number is also on the computer's screen.</b>
-       No number there, or you're not signing in? Deny.</p>
-    <div class="row">
-      <button class="btn red" onclick="deny()"><svg class="ic"><use href="#i-x"/></svg> Deny</button>
-      <button class="btn green" onclick="approve()"><svg class="ic"><use href="#i-check"/></svg> Approve</button>
+  <!-- Scrollable content area -->
+  <main class="main">
+
+    <!-- ── ENROLL: set up this device ── -->
+    <div class="card center" id="enrollCard" style="display:none">
+      <div class="bigico">
+        <svg class="ic lg"><use href="#i-key"/></svg>
+      </div>
+      <h2>Set up this device as your key</h2>
+      <p class="sub">
+        A private security key will be created and saved only on this device.
+        It cannot be copied or stolen remotely — your phone becomes the lock and key in one.
+      </p>
+
+      <label for="deviceName">Name this device</label>
+      <input type="text" id="deviceName" placeholder="e.g. My iPhone" autocomplete="off">
+      <div class="hint" id="enrollStatus"></div>
+
+      <button class="btn primary" id="btnEnroll" onclick="enroll()">
+        <svg class="ic"><use href="#i-key"/></svg>
+        Make this my key
+      </button>
     </div>
-  </div>
 
-  <div class="card" id="historyCard" style="display:none">
-    <h2 style="font-size:1rem"><svg class="ic"><use href="#i-activity"/></svg> Recent activity on this device</h2>
-    <ul class="list" id="history"></ul>
-  </div>
+    <!-- ── KEY CARD: main listening screen ── -->
+    <div class="card center" id="keyCard" style="display:none">
 
-  <div class="card center" id="emptyCard" style="display:none">
-    <h2 style="justify-content:center">This device isn't a key yet</h2>
-    <p class="sub">Create an account on your computer — it will show a QR code that sets up this phone.
-       Already have an account? Add this device from your dashboard.</p>
-    <button class="btn ghost" onclick="location.href='../web/signup.html'">Create an account</button>
+      <!-- Pulsing ring (shows animated when listening) -->
+      <div class="listen-ring idle" id="listenRing">
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="inner" id="listenInner">
+          <svg class="ic xl"><use href="#i-mic"/></svg>
+        </div>
+      </div>
+
+      <!-- Hidden wave kept for JS compatibility -->
+      <div id="listenWave" style="display:none"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+      <h2 style="justify-content:center" id="keyTitle">Ready</h2>
+
+      <!-- Account + device info chips -->
+      <div class="info-row">
+        <span class="chip">
+          <svg class="ic sm"><use href="#i-user"/></svg>
+          <b id="whoami"></b>
+        </span>
+        <span class="chip">
+          <svg class="ic sm"><use href="#i-phone"/></svg>
+          <span id="devname"></span>
+        </span>
+        <!-- hidden server host for JS compat -->
+        <span id="serverHost" style="display:none"></span>
+      </div>
+
+      <!-- Main listen/stop button -->
+      <button class="btn green" id="btnListen" onclick="toggleListen()">
+        <svg class="ic"><use href="#i-mic"/></svg>
+        <span id="listenLabel">Start listening</span>
+      </button>
+
+      <div class="status" id="listenStatus">
+        Tap "Start listening", then keep this page open near your computer.
+      </div>
+
+      <!-- Manual fallback — no jargon, collapsed by default -->
+      <div class="manual-section">
+        <button class="manual-toggle" id="manualToggle" type="button" onclick="toggleManual()">
+          <svg class="ic sm"><use href="#i-alert"/></svg>
+          Microphone not working?
+        </button>
+        <div class="manual-body" id="manualBody">
+          <p style="font-size:0.82rem;color:var(--muted);margin:0 0 12px;line-height:1.55;">
+            If your microphone isn't available, ask the person at the computer to share the
+            short code shown on their screen, then paste it below.
+          </p>
+          <input type="text" id="manualNonce"
+                 placeholder="Paste the code here"
+                 autocomplete="off" autocorrect="off" spellcheck="false"
+                 style="font-family:'JetBrains Mono',monospace;letter-spacing:2px;text-transform:lowercase;">
+          <button class="btn ghost" onclick="manualApprove()" style="margin-top:10px">
+            <svg class="ic"><use href="#i-check"/></svg>
+            Verify this code
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EMPTY: device not yet set up ── -->
+    <div class="card center" id="emptyCard" style="display:none">
+      <div class="empty-state">
+        <div class="bigico">
+          <svg class="ic lg"><use href="#i-shield"/></svg>
+        </div>
+        <h2>This device isn't a key yet</h2>
+        <p class="sub">
+          To get started, create your Echo account on a computer — it will show a QR code
+          you can scan to turn this phone into your key.
+          Already have an account? Add this device from your dashboard.
+        </p>
+        <button class="btn ghost" onclick="location.href='../web/signup.html'">
+          <svg class="ic"><use href="#i-arrow-right"/></svg>
+          Create an account
+        </button>
+      </div>
+    </div>
+
+    <!-- ── HISTORY: recent sign-in activity ── -->
+    <div class="card" id="historyCard" style="display:none">
+      <div class="section-head">
+        <svg class="ic sm"><use href="#i-activity"/></svg>
+        Recent activity
+      </div>
+      <ul class="history-list" id="history"></ul>
+    </div>
+
+  </main>
+</div><!-- end .shell -->
+
+<!-- ══════════════════════════════════════════
+     APPROVE OVERLAY — slides up from bottom
+══════════════════════════════════════════ -->
+<div class="approve-overlay" id="approveCard" style="display:none">
+  <div class="approve-sheet">
+    <div class="sheet-handle"></div>
+
+    <!-- Bell icon -->
+    <div class="bigico" style="width:64px;height:64px;margin-bottom:16px">
+      <svg class="ic lg"><use href="#i-bell"/></svg>
+    </div>
+
+    <!-- Who is signing in -->
+    <div class="approve-who" id="approveWho"></div>
+
+    <!-- Verification number -->
+    <div class="match-label">Check this number matches your computer screen</div>
+    <div class="match-number" id="matchNum"></div>
+
+    <p class="approve-desc">
+      A computer nearby wants to sign in to your account.
+      <strong>Confirm the number above is the same on the computer.</strong>
+      If you're not signing in, tap Deny.
+    </p>
+
+    <div class="action-row">
+      <button class="btn red" onclick="deny()">
+        <svg class="ic"><use href="#i-x"/></svg>
+        Deny
+      </button>
+      <button class="btn green" onclick="approve()">
+        <svg class="ic"><use href="#i-check"/></svg>
+        Approve
+      </button>
+    </div>
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
 <script>
 let ggwave = null, context = null, instance = null;
 let mediaStream = null, recorder = null, stream = null, listening = false;
 let pendingNonce = null, lastNonce = null, deferredInstall = null;
+let manualOpen = false;
 
 const $ = id => document.getElementById(id);
 
 if (typeof ggwave_factory !== 'undefined') ggwave_factory().then(g => { ggwave = g; });
 
-// PWA install + service worker
+/* ── PWA install prompt ── */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-window.addEventListener('beforeinstallprompt', (e) => {
+window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredInstall = e;
   $('installBadge').style.display = '';
-  $('installBadge').onclick = () => { deferredInstall.prompt(); };
+  $('installBadge').onclick = () => deferredInstall.prompt();
 });
 
-// ---------- IndexedDB key storage
+/* ── IndexedDB key storage ── */
 function idb() {
   return new Promise((res, rej) => {
     const open = indexedDB.open('echo-keys', 1);
     open.onupgradeneeded = () => open.result.createObjectStore('kv');
     open.onsuccess = () => res(open.result);
-    open.onerror = () => rej(open.error);
+    open.onerror  = () => rej(open.error);
   });
 }
 async function kvSet(k, v) {
@@ -117,52 +235,80 @@ async function kvGet(k) {
   const db = await idb();
   return new Promise((res, rej) => {
     const rq = db.transaction('kv', 'readonly').objectStore('kv').get(k);
-    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror   = () => rej(rq.error);
   });
 }
 
-// ---------- view routing
+/* ── View routing ── */
 async function route() {
-  const token = new URLSearchParams(location.search).get('token');
+  const token    = new URLSearchParams(location.search).get('token');
   const username = await kvGet('username');
+
   if (token) {
     $('enrollCard').style.display = '';
-    const guess = /android/i.test(navigator.userAgent) ? 'Android phone'
-                : /iphone|ipad/i.test(navigator.userAgent) ? 'iPhone' : 'This device';
+    const guess =
+      /android/i.test(navigator.userAgent)     ? 'My Android phone' :
+      /iphone|ipad/i.test(navigator.userAgent) ? 'My iPhone' : 'This device';
     $('deviceName').value = guess;
-    if (username) $('enrollStatus').textContent =
-      'Note: this device already holds a key for "' + username + '" — enrolling replaces it here.';
+
+    if (username) {
+      const notice = $('enrollStatus');
+      notice.className = 'hint';
+      notice.innerHTML =
+        '<svg class="ic sm" style="color:#b45309;vertical-align:-2px"><use href="#i-alert"/></svg> ' +
+        'This device already holds a key for <strong>' + username + '</strong>. ' +
+        'Setting up again will replace it on this device only.';
+    }
     return;
   }
+
   if (username) {
     $('keyCard').style.display = '';
-    $('whoami').textContent = username;
-    $('devname').textContent = await kvGet('deviceName') || 'device';
-    $('serverHost').textContent = location.host;
+    $('whoami').textContent  = username;
+    $('devname').textContent = (await kvGet('deviceName')) || 'this device';
     renderHistory();
   } else {
     $('emptyCard').style.display = '';
   }
 }
 
-// ---------- enrollment
+/* ── Enrollment ── */
 async function enroll() {
-  const token = new URLSearchParams(location.search).get('token');
+  const token      = new URLSearchParams(location.search).get('token');
+  const deviceName = $('deviceName').value.trim() || 'My phone';
+  const status     = $('enrollStatus');
+
   $('btnEnroll').disabled = true;
-  const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
+  status.className = 'hint';
+  status.textContent = 'Creating your key…';
+
+  let keys;
+  try {
+    keys = await crypto.subtle.generateKey(
+      { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']
+    );
+  } catch {
+    status.className = 'hint bad';
+    status.textContent = 'Your device does not support secure key generation.';
+    $('btnEnroll').disabled = false;
+    return;
+  }
+
   const publicKeyJwk = await crypto.subtle.exportKey('jwk', keys.publicKey);
-  const deviceName = $('deviceName').value.trim() || 'phone';
   const r = await fetch('/api/enroll', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enrollToken: token, deviceName, publicKeyJwk })
   }).catch(() => null);
+
   if (!r || !r.ok) {
-    const err = r ? (await r.json().catch(() => ({}))).error : 'Server unreachable';
-    $('enrollStatus').className = 'status bad';
-    $('enrollStatus').textContent = err || 'Enrollment failed';
+    const err = r ? (await r.json().catch(() => ({}))).error : 'Cannot reach the server';
+    status.className = 'hint bad';
+    status.textContent = err || 'Setup failed — please try again.';
     $('btnEnroll').disabled = false;
     return;
   }
+
   const data = await r.json();
   await kvSet('privateKey', keys.privateKey);
   await kvSet('deviceId', data.deviceId);
@@ -174,7 +320,7 @@ async function enroll() {
   route();
 }
 
-// ---------- audio
+/* ── Audio context ── */
 function ensureAudio() {
   if (!context) {
     context = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
@@ -191,153 +337,188 @@ function convertTypedArray(src, type) {
   return new type(buffer);
 }
 
+/* ── Listen toggle ── */
 function toggleListen() { listening ? stopListen() : startListen(); }
 
 function startListen() {
-  if (!ggwave) { setStatus('Sound library not loaded', 'bad'); return; }
+  if (!ggwave) { setStatus('Sound module still loading — try again in a moment.', 'bad'); return; }
   ensureAudio();
+
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
   }).then(s => {
-    stream = s;
+    stream      = s;
     mediaStream = context.createMediaStreamSource(s);
-    recorder = context.createScriptProcessor(1024, 1, 1);
+    recorder    = context.createScriptProcessor(1024, 1, 1);
     recorder.onaudioprocess = e => {
       const samples = new Float32Array(e.inputBuffer.getChannelData(0));
-      const res = ggwave.decode(instance, convertTypedArray(samples, Int8Array));
+      const res     = ggwave.decode(instance, convertTypedArray(samples, Int8Array));
       if (res && res.length > 0) {
         const text = new TextDecoder('utf-8').decode(res);
         if (text === lastNonce) return;
         lastNonce = text;
-        // Only genuine Echo sign-in transmissions carry the E1: envelope.
-        // Anything else (demos, other apps, noise) is ignored — no prompt.
+        // Only accept genuine Echo sign-in transmissions (E1: envelope)
         const m = /^E1:([A-Za-z0-9_-]{16})$/.exec(text);
         if (m) heard(m[1]);
-        else setStatus('Heard a sound that is not an Echo sign-in — ignored');
+        // else: ignore background noise / other audio
       }
     };
     mediaStream.connect(recorder);
     recorder.connect(context.destination);
     listening = true;
-    $('listenWave').classList.add('anim');
+
+    // Update ring to active (pulsing)
+    $('listenRing').classList.remove('idle');
+    $('listenInner').innerHTML = '<svg class="ic xl" style="color:var(--ok)"><use href="#i-mic"/></svg>';
+
     $('listenLabel').textContent = 'Stop listening';
     $('btnListen').className = 'btn red';
-    $('keyTitle').textContent = 'Listening';
-    setStatus('Waiting for a sign-in sound nearby');
+    $('keyTitle').textContent = 'Listening…';
+    setStatus('Waiting for a sign-in sound from your computer.');
   }).catch(err => {
-    setStatus('Microphone blocked: ' + err.name + ' — page must be https or localhost', 'bad');
+    setStatus(
+      err.name === 'NotAllowedError'
+        ? 'Microphone access was blocked. Please allow it in your browser settings.'
+        : 'Could not access the microphone: ' + err.message,
+      'bad'
+    );
   });
 }
 
 function stopListen() {
-  if (recorder) { recorder.disconnect(); recorder = null; }
+  if (recorder)    { recorder.disconnect(); recorder = null; }
   if (mediaStream) { mediaStream.disconnect(); mediaStream = null; }
-  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  if (stream)      { stream.getTracks().forEach(t => t.stop()); stream = null; }
   listening = false;
-  $('listenWave').classList.remove('anim');
+
+  // Reset ring to idle
+  $('listenRing').classList.add('idle');
+  $('listenInner').innerHTML = '<svg class="ic xl"><use href="#i-mic"/></svg>';
+
   $('listenLabel').textContent = 'Start listening';
   $('btnListen').className = 'btn green';
   $('keyTitle').textContent = 'Ready';
-  setStatus('Keep this page open near the computer you\'re signing in on.');
+  setStatus('Tap "Start listening", then keep this page open near your computer.');
 }
 
 function setStatus(msg, cls) {
-  $('listenStatus').className = 'status' + (cls ? ' ' + cls : '');
-  $('listenStatus').textContent = msg;
+  const el = $('listenStatus');
+  el.className = 'status' + (cls ? ' ' + cls : '');
+  el.textContent = msg;
 }
 
-// ---------- consent + signing
-// Both ends derive the same 2-digit verification number from the nonce,
-// so the user can confirm the prompt belongs to THEIR sign-in (anti-fatigue).
+/* ── Manual code toggle ── */
+function toggleManual() {
+  manualOpen = !manualOpen;
+  $('manualBody').classList.toggle('open', manualOpen);
+}
+
+/* ── Verification number (both ends derive the same value from the nonce) ── */
 async function matchCode(nonce) {
   const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nonce));
   return String(10 + new Uint8Array(d)[0] % 90);
 }
 
+/* ── A sign-in sound was heard ── */
 async function heard(nonce) {
   const deviceId = await kvGet('deviceId');
   if (!deviceId) {
-    setStatus('Cannot verify: this device is not enrolled.', 'bad');
+    setStatus('This device is not set up as a key. Please enroll it first.', 'bad');
     return;
   }
 
   try {
-    const res = await fetch(`/api/login/check?nonce=${encodeURIComponent(nonce)}&deviceId=${encodeURIComponent(deviceId)}`);
+    const res = await fetch(
+      `/api/login/check?nonce=${encodeURIComponent(nonce)}&deviceId=${encodeURIComponent(deviceId)}`
+    );
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      console.log('Ignored login session:', err.error || res.status);
-      setStatus('Heard a sign-in request that is not meant for you — ignored');
+      // Sign-in request belongs to a different device — silently ignore
+      setStatus('Heard a sign-in sound — it was not meant for this device.');
       return;
     }
-  } catch (e) {
-    console.error('Pre-flight validation failed:', e);
-    setStatus('Connection error during pre-flight check.', 'bad');
+  } catch {
+    setStatus('Connection error — make sure you are on the same network.', 'bad');
     return;
   }
 
   pendingNonce = nonce;
   if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
-  $('approveWho').textContent = await kvGet('username');
-  $('matchNum').textContent = await matchCode(nonce);
-  $('keyCard').style.display = 'none';
+
+  $('approveWho').textContent = (await kvGet('username')) || 'your account';
+  $('matchNum').textContent   = await matchCode(nonce);
+
+  // Show approve overlay (keyCard stays visible beneath it)
   $('approveCard').style.display = '';
 }
 
 function manualApprove() {
-  const n = $('manualNonce').value.trim().replace(/^E1:/, '');
+  const n = $('manualNonce').value.trim().replace(/^E1:/i, '');
   if (n) heard(n);
 }
 
+/* ── Approve ── */
 async function approve() {
   const nonce = pendingNonce;
   closeApprove();
+
   const privateKey = await kvGet('privateKey');
-  const deviceId = await kvGet('deviceId');
-  const message = `echo-v1|${nonce}|${deviceId}`;
-  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, privateKey,
-    new TextEncoder().encode(message));
+  const deviceId   = await kvGet('deviceId');
+  const message    = `echo-v1|${nonce}|${deviceId}`;
+  const sig = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' }, privateKey, new TextEncoder().encode(message)
+  );
   const signature = btoa(String.fromCharCode(...new Uint8Array(sig)))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
   const r = await fetch('/api/login/verify', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nonce, deviceId, signature })
   }).catch(() => null);
-  const ok = r && r.ok;
-  const err = ok ? null : (r ? (await r.json().catch(() => ({}))).error : 'server unreachable');
-  setStatus(ok ? 'Approved — the computer is signing in' : 'Rejected: ' + err, ok ? 'ok' : 'bad');
+
+  const ok  = r && r.ok;
+  const err = ok ? null : (r ? (await r.json().catch(() => ({}))).error : 'Server unreachable');
+
+  setStatus(ok ? '✓ Approved — the computer is signing in.' : 'Rejected: ' + err, ok ? 'ok' : 'bad');
   if (ok && navigator.vibrate) navigator.vibrate(80);
-  addHistory(ok ? 'approved' : 'failed: ' + err, ok);
+  addHistory(ok ? 'Approved' : 'Rejected: ' + err, ok);
 }
 
+/* ── Deny ── */
 function deny() {
   closeApprove();
-  setStatus('Request denied', 'bad');
-  addHistory('denied', false);
+  setStatus('Sign-in request denied.', 'bad');
+  addHistory('Denied', false);
+  if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
 }
 
 function closeApprove() {
   $('approveCard').style.display = 'none';
-  $('keyCard').style.display = '';
 }
 
-// ---------- local history
+/* ── Local history ── */
 function addHistory(result, ok) {
   const h = JSON.parse(localStorage.getItem('echo-history') || '[]');
   h.unshift({ t: Date.now(), result, ok });
   localStorage.setItem('echo-history', JSON.stringify(h.slice(0, 20)));
   renderHistory();
 }
+
 function renderHistory() {
   const h = JSON.parse(localStorage.getItem('echo-history') || '[]');
   if (!h.length) return;
   $('historyCard').style.display = '';
   $('history').innerHTML = h.map(x => `
     <li>
-      <span class="badge ${x.ok ? 'ok' : 'bad'}">
-        <svg class="ic"><use href="#i-${x.ok ? 'check' : 'x'}"/></svg>
-      </span>
-      <div class="grow"><div class="t1">Sign-in ${x.result}</div>
-      <div class="t2">${new Date(x.t).toLocaleString()}</div></div>
+      <div class="event-icon ${x.ok ? 'ok' : 'bad'}">
+        <svg class="ic sm"><use href="#i-${x.ok ? 'check' : 'x'}"/></svg>
+      </div>
+      <div>
+        <div class="event-title">${x.result}</div>
+        <div class="event-time">${new Date(x.t).toLocaleString(undefined, {
+          month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        })}</div>
+      </div>
     </li>`).join('');
 }
 

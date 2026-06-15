@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background circle -->
+  <rect width="32" height="32" rx="8" fill="#2563eb"/>
+  <!-- Wave bars (6 bars, rounded caps, white, varying heights centred at y=16) -->
+  <!-- Bar 1 -->
+  <rect x="3"  y="13" width="3" height="6"  rx="1.5" fill="white" opacity="0.6"/>
+  <!-- Bar 2 -->
+  <rect x="8"  y="10" width="3" height="12" rx="1.5" fill="white" opacity="0.8"/>
+  <!-- Bar 3 -->
+  <rect x="13" y="7"  width="3" height="18" rx="1.5" fill="white"/>
+  <!-- Bar 4 -->
+  <rect x="18" y="9"  width="3" height="14" rx="1.5" fill="white"/>
+  <!-- Bar 5 -->
+  <rect x="23" y="12" width="3" height="8"  rx="1.5" fill="white" opacity="0.8"/>
+  <!-- Bar 6 -->
+  <rect x="28" y="14" width="3" height="4"  rx="1.5" fill="white" opacity="0.6"/>
+</svg>
