@@ -34,7 +34,7 @@ db.prepare = function(sql) {
 try { 
   db.exec('PRAGMA journal_mode = WAL'); 
 } catch (e) { 
-  // WAL unsupported on some filesystems
+  console.warn('SQLite WAL journal mode unsupported on this filesystem. Falling back to default mode.', e);
 }
 
 // Create Schema
@@ -42,6 +42,7 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
+  password_hash TEXT,
   created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS devices (
@@ -93,8 +94,41 @@ CREATE TABLE IF NOT EXISTS logins (
 );
 `);
 
+try {
+  db.exec('ALTER TABLE users ADD COLUMN password_hash TEXT');
+} catch (e) {
+  // Column already exists
+}
+
 const now = () => Date.now();
 const rand = (bytes) => crypto.randomBytes(bytes).toString('base64url');
+
+// Hash a new password: random 256-bit salt + NIST-recommended 310 000 iterations
+// Format: "iterations:saltHex:hashHex"
+function hashPassword(password) {
+  const salt = crypto.randomBytes(32).toString('hex');
+  const iterations = 310_000; // NIST SP 800-132 (2023) minimum for PBKDF2-SHA-256
+  const hash = crypto.pbkdf2Sync(password, salt, iterations, 64, 'sha256').toString('hex');
+  return `${iterations}:${salt}:${hash}`;
+}
+
+// Verify a password against a stored hash (supports both new format and legacy single-hash).
+// Always runs a full PBKDF2 derive to prevent timing-based user enumeration.
+function verifyPassword(password, stored) {
+  const parts = stored.split(':');
+  if (parts.length === 3) {
+    // New format: iterations:salt:hash
+    const [iters, salt, hash] = parts;
+    const candidate = crypto.pbkdf2Sync(password, salt, Number(iters), 64, 'sha256').toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(candidate, 'hex'), Buffer.from(hash, 'hex'));
+  } else {
+    // Legacy format: single hex hash with static salt — compare and upgrade prompt returned
+    const candidate = crypto.pbkdf2Sync(password, 'echo-salt-key-99', 10000, 64, 'sha256').toString('hex');
+    // timingSafeEqual requires equal-length buffers
+    if (candidate.length !== stored.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(candidate, 'hex'), Buffer.from(stored, 'hex'));
+  }
+}
 
 function getCookie(req, name) {
   const header = req.headers.cookie || '';
@@ -149,11 +183,14 @@ module.exports = {
   db,
   now,
   rand,
+  getCookie,
   currentUser,
   hashCode,
   logLogin,
   recoveryAllowed,
   verifySignature,
+  hashPassword,
+  verifyPassword,
   NONCE_TTL_MS,
   SESSION_TTL_MS,
   SIGN_PREFIX

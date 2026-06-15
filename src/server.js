@@ -7,9 +7,9 @@ const path = require('path');
 const crypto = require('crypto');
 
 const {
-  db, now, rand, currentUser, hashCode,
-  logLogin, recoveryAllowed, verifySignature,
-  NONCE_TTL_MS, SESSION_TTL_MS, SIGN_PREFIX
+  db, now, rand, getCookie, currentUser, hashCode,
+  logLogin, recoveryAllowed, verifySignature, hashPassword,
+  verifyPassword, NONCE_TTL_MS, SESSION_TTL_MS, SIGN_PREFIX
 } = require('./db');
 const { attachWebSocket, notifyLaptop } = require('./websocket');
 
@@ -33,8 +33,51 @@ const app = express();
 // Trust Render's (and any standard) reverse proxy so that req.protocol
 // reflects https and cookies can be marked Secure correctly.
 app.set('trust proxy', 1);
+
+// ---- Security hardening ----
+// Remove framework fingerprint header
+app.disable('x-powered-by');
+
+// HTTP security headers — prevents clickjacking, MIME-sniffing, data leakage
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'microphone=(self), camera=(), geolocation=()');
+  // Allow ggwave WASM, Google Fonts, and QR code inline scripts
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",   // ggwave inline init
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "connect-src 'self' wss:",              // WebSocket sign-in channel
+      "img-src 'self' data:",                 // QR code SVG data URIs
+      "worker-src 'self'",
+      "frame-ancestors 'none'"
+    ].join('; ')
+  );
+  if (IS_PROD) {
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  }
+  next();
+});
+
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, '../public')));
+
+// ---- Login/start rate limiter (per username, in-process) ----
+// Mirrors the recovery limiter: 10 attempts per 5 minutes.
+const loginStartAttempts = new Map();
+function loginStartAllowed(uname) {
+  const now = Date.now();
+  const e = loginStartAttempts.get(uname);
+  if (e && e.resetAt > now && e.n >= 10) return false;
+  if (!e || e.resetAt <= now) loginStartAttempts.set(uname, { n: 1, resetAt: now + 5 * 60_000 });
+  else e.n++;
+  return true;
+}
 
 // Health check — Render pings this to confirm the service is alive
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
@@ -47,10 +90,15 @@ app.get('/web/index.html', (_req, res) => res.redirect('/web/home.html'));
 // ---------------------------------------------------------------- Signup
 
 // Step 1: claim a username and receive a single-use enroll token
+// Intentionally public: entrypoint for initiating registration
 app.post('/api/signup', (req, res) => {
   const uname = String((req.body || {}).username || '').trim().toLowerCase();
+  const password = String((req.body || {}).password || '').trim();
   if (!/^[a-z0-9_.-]{2,32}$/.test(uname)) {
     return res.status(400).json({ error: 'invalid username (2-32 chars: a-z 0-9 _ . -)' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'password must be at least 8 characters long' });
   }
 
   const user = db.prepare('SELECT id FROM users WHERE username = ?').get(uname);
@@ -59,7 +107,13 @@ app.post('/api/signup', (req, res) => {
     if (hasDevice) return res.status(409).json({ error: 'username already taken' });
   }
 
-  db.prepare('INSERT OR IGNORE INTO users (username, created_at) VALUES (?, ?)').run(uname, now());
+  const hashed = hashPassword(password);
+  if (user) {
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashed, user.id);
+  } else {
+    db.prepare('INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)').run(uname, hashed, now());
+  }
+
   const token = rand(16);
   db.prepare('INSERT INTO enroll_tokens (token, username, expires_at, created_at) VALUES (?, ?, ?, ?)')
     .run(token, uname, now() + ENROLL_TTL_MS, now());
@@ -68,6 +122,7 @@ app.post('/api/signup', (req, res) => {
 });
 
 // Step 2: the phone redeems the enroll token and registers its public key
+// Intentionally public: verify the enroll token and register a device
 app.post('/api/enroll', (req, res) => {
   const { enrollToken, deviceName, publicKeyJwk } = req.body || {};
   if (!enrollToken || !publicKeyJwk || publicKeyJwk.kty !== 'EC' || publicKeyJwk.crv !== 'P-256') {
@@ -79,7 +134,7 @@ app.post('/api/enroll', (req, res) => {
   if (t.expires_at < now()) return res.status(401).json({ error: 'enroll token expired' });
 
   const burned = db.prepare('UPDATE enroll_tokens SET used = 1 WHERE token = ? AND used = 0').run(t.token);
-  if (burned.changes === 0) return res.status(401).json({ error: 'enroll token already used' });
+  if (burned.changes < 1) return res.status(401).json({ error: 'enroll token already used' });
 
   const user = db.prepare('SELECT id FROM users WHERE username = ?').get(t.username);
   const deviceId = rand(9);
@@ -101,10 +156,18 @@ app.get('/api/signup/status', (req, res) => {
 // ---------------------------------------------------------------- Login
 
 // Step 1: the laptop requests a single-use nonce bound to this session
+// Intentionally public: anyone can request a sign-in session for a username
 app.post('/api/login/start', (req, res) => {
   const uname = String((req.body || {}).username || '').trim().toLowerCase();
+
+  // Rate-limit per username: 10 start attempts per 5 minutes
+  if (uname && !loginStartAllowed(uname)) {
+    return res.status(429).json({ error: 'too many attempts — please wait a few minutes' });
+  }
+
   const user = db.prepare('SELECT id FROM users WHERE username = ?').get(uname);
   const device = user && db.prepare('SELECT id FROM devices WHERE user_id = ? LIMIT 1').get(user.id);
+  // Return the same generic error for unknown user OR no device to prevent username enumeration
   if (!user || !device) return res.status(404).json({ error: 'unknown user or no enrolled device' });
 
   const sessionId = rand(16);
@@ -117,54 +180,33 @@ app.post('/api/login/start', (req, res) => {
 });
 
 // Pre-flight check: the phone silently checks if the nonce belongs to this device's owner
+// Intentionally public: called by the phone to confirm the nonce is meant for this device
 app.get('/api/login/check', (req, res) => {
-  const nonce = String(req.query.nonce || '');
+  const nonce    = String(req.query.nonce    || '');
   const deviceId = String(req.query.deviceId || '');
-  console.log(`[CHECK] Incoming pre-flight check - Nonce: "${nonce}", DeviceId: "${deviceId}"`);
 
   if (!nonce || !deviceId) {
-    console.log('[CHECK] Missing nonce or deviceId');
     return res.status(400).json({ error: 'nonce and deviceId required' });
   }
 
   const ls = db.prepare('SELECT * FROM login_sessions WHERE nonce = ?').get(nonce);
-  
-  // Log active nonces to diagnose host/timezone mismatches
-  const activeSessions = db.prepare('SELECT username, nonce, expires_at FROM login_sessions WHERE used = 0').all();
-  console.log(`[CHECK] Active nonces in database:`, activeSessions.map(s => `(${s.username}: "${s.nonce}", expires: ${s.expires_at})`));
-
-  if (!ls) {
-    console.log(`[CHECK] Nonce "${nonce}" NOT FOUND in database.`);
-    return res.status(404).json({ error: 'unknown nonce' });
-  }
-  if (ls.used) {
-    console.log(`[CHECK] Nonce "${nonce}" has already been used.`);
-    return res.status(410).json({ error: 'nonce already used' });
-  }
-  if (ls.expires_at < now()) {
-    console.log(`[CHECK] Nonce "${nonce}" expired at ${ls.expires_at} (current time: ${now()}).`);
-    return res.status(410).json({ error: 'nonce expired' });
-  }
+  if (!ls)       return res.status(404).json({ error: 'unknown nonce' });
+  if (ls.used)   return res.status(410).json({ error: 'nonce already used' });
+  if (ls.expires_at < now()) return res.status(410).json({ error: 'nonce expired' });
 
   const device = db.prepare(
     `SELECT d.*, u.username FROM devices d JOIN users u ON u.id = d.user_id WHERE d.id = ?`
   ).get(deviceId);
 
-  if (!device) {
-    console.log(`[CHECK] Device "${deviceId}" not found in database.`);
+  if (!device || device.username !== ls.username) {
     return res.status(403).json({ error: 'mismatched user device' });
   }
 
-  if (device.username !== ls.username) {
-    console.log(`[CHECK] Mismatch! Device belongs to "${device.username}", but session belongs to "${ls.username}"`);
-    return res.status(403).json({ error: 'mismatched user device' });
-  }
-
-  console.log(`[CHECK] Pre-flight SUCCESS for user "${ls.username}" on device "${deviceId}"`);
   res.json({ ok: true, username: ls.username });
 });
 
 // Step 2: the phone submits the user-approved ECDSA signature over the nonce
+// Intentionally public: phone posts signature to authenticate the laptop session
 app.post('/api/login/verify', async (req, res) => {
   const { nonce, deviceId, signature } = req.body || {};
   if (!nonce || !deviceId || !signature) {
@@ -207,6 +249,7 @@ app.post('/api/login/verify', async (req, res) => {
 });
 
 // Step 3: the laptop exchanges the one-time claim token for a session cookie
+// Intentionally public: laptop exchanges the claim token for a session cookie
 app.post('/api/session/claim', (req, res) => {
   const { sessionId, claimToken } = req.body || {};
   const ls = db.prepare(
@@ -220,7 +263,7 @@ app.post('/api/session/claim', (req, res) => {
   db.prepare('INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
     .run(token, user.id, now() + SESSION_TTL_MS, now());
 
-  const cookieFlags = `HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${IS_PROD ? '; Secure' : ''}`;
+  const cookieFlags = `HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${IS_PROD ? '; Secure' : ''}`;
   res.setHeader('Set-Cookie', `echo_session=${token}; ${cookieFlags}`);
   res.json({ ok: true, username: ls.username });
 });
@@ -241,33 +284,40 @@ app.post('/api/recovery/generate', (req, res) => {
 });
 
 // Fallback login path when the phone is unavailable
+// Intentionally public: fallback recovery access using password
 app.post('/api/login/recovery', (req, res) => {
   const uname = String((req.body || {}).username || '').trim().toLowerCase();
-  const code = String((req.body || {}).code || '');
-  const user = db.prepare('SELECT id FROM users WHERE username = ?').get(uname);
-  if (!user) return res.status(401).json({ error: 'invalid username or code' });
+  const password = String((req.body || {}).password || '');
+  const user = db.prepare('SELECT id, password_hash FROM users WHERE username = ?').get(uname);
+  if (!user || !user.password_hash) return res.status(401).json({ error: 'invalid username or password' });
   if (!recoveryAllowed(uname)) return res.status(429).json({ error: 'too many attempts — wait 15 minutes' });
 
-  const h = hashCode(uname, code);
-  const row = db.prepare('SELECT id FROM recovery_codes WHERE user_id = ? AND code_hash = ? AND used = 0')
-    .get(user.id, h);
+  const ok = verifyPassword(password, user.password_hash);
 
-  if (!row) {
-    logLogin(user.id, 'recovery', null, false, 'bad code');
-    return res.status(401).json({ error: 'invalid username or code' });
+  if (!ok) {
+    logLogin(user.id, 'recovery', null, false, 'bad password');
+    return res.status(401).json({ error: 'invalid username or password' });
   }
 
-  db.prepare('UPDATE recovery_codes SET used = 1 WHERE id = ?').run(row.id);
+  // Migrate legacy static-salt hashes to the new salt/iteration format
+  if (!user.password_hash.includes(':')) {
+    try {
+      const newHash = hashPassword(password);
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
+    } catch (err) {
+      console.error('Failed to auto-upgrade legacy password hash:', err);
+    }
+  }
+
   logLogin(user.id, 'recovery', null, true, null);
 
   const token = rand(32);
   db.prepare('INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
     .run(token, user.id, now() + SESSION_TTL_MS, now());
-  const cookieFlags = `HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${IS_PROD ? '; Secure' : ''}`;
+  const cookieFlags = `HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${IS_PROD ? '; Secure' : ''}`;
   res.setHeader('Set-Cookie', `echo_session=${token}; ${cookieFlags}`);
 
-  const remaining = db.prepare('SELECT COUNT(*) c FROM recovery_codes WHERE user_id = ? AND used = 0').get(user.id).c;
-  res.json({ ok: true, username: uname, remainingCodes: remaining });
+  res.json({ ok: true, username: uname });
 });
 
 // ---------------------------------------------------------------- Device Management
@@ -305,19 +355,42 @@ app.get('/api/me', (req, res) => {
      FROM logins l LEFT JOIN devices d ON d.id = l.device_id
      WHERE l.user_id = ? ORDER BY l.id DESC LIMIT 12`
   ).all(user.id);
-  res.json({ username: user.username, devices, recoveryUnused, recentLogins });
+  const fullUser = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id);
+  const hasPassword = !!(fullUser && fullUser.password_hash);
+  res.json({ username: user.username, devices, recoveryUnused, recentLogins, hasPassword });
+});
+
+// Change the backup password from the dashboard
+app.post('/api/password/change', (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: 'not logged in' });
+  const { currentPassword, newPassword } = req.body || {};
+  if (!newPassword || String(newPassword).length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+  }
+  const fullUser = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id);
+  // If user already has a password, verify the current one first
+  if (fullUser && fullUser.password_hash) {
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required.' });
+    }
+    const ok = verifyPassword(String(currentPassword), fullUser.password_hash);
+    if (!ok) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+  }
+  const newHash = hashPassword(String(newPassword));
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
+  res.json({ ok: true });
 });
 
 // Invalidate the current session cookie
+// Intentionally public: allows any client to clear their active session cookie
 app.post('/api/logout', (req, res) => {
-  const header = req.headers.cookie || '';
-  let token = null;
-  for (const part of header.split(';')) {
-    const [k, ...v] = part.trim().split('=');
-    if (k === 'echo_session') { token = decodeURIComponent(v.join('=')); break; }
-  }
+  const token = getCookie(req, 'echo_session');
   if (token) db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-  res.setHeader('Set-Cookie', 'echo_session=; HttpOnly; Path=/; Max-Age=0');
+  const clearFlags = `HttpOnly; SameSite=Strict; Path=/; Max-Age=0${IS_PROD ? '; Secure' : ''}`;
+  res.setHeader('Set-Cookie', `echo_session=; ${clearFlags}`);
   res.json({ ok: true });
 });
 

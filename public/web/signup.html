@@ -3,54 +3,128 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Echo — create account</title>
+<title>Echo — Create Account</title>
 <link rel="stylesheet" href="../echo.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <script src="../qrcode.js"></script>
 </head>
 <body>
 <script src="../icons.js"></script>
-<div class="wrap">
-  <nav class="nav">
-    <a class="brand" href="home.html">
-      <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-      <span class="word">echo</span>
-    </a>
-    <span class="links"><a class="link" href="login.html">Sign in</a></span>
-  </nav>
+<div class="wrap" style="padding-top: 60px; padding-bottom: 60px;">
+  <div style="margin-top: 20px;">
+    <div class="dots"><i id="d1" class="on"></i><i id="d2"></i><i id="d3"></i></div>
 
-  <div class="dots"><i id="d1" class="on"></i><i id="d2"></i><i id="d3"></i></div>
+    <!-- ── Step 1: username + password ── -->
+    <div class="card" id="step1">
+      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="word">echo</span>
+      </div>
 
-  <div class="card" id="step1">
-    <h2>Choose your username</h2>
-    <p class="sub">This is all you'll ever type to sign in. Your phone becomes your key in the next step.</p>
-    <label for="username">Username</label>
-    <input type="text" id="username" placeholder="e.g. kwame.a" autocomplete="off" spellcheck="false"
-           oninput="checkName(this.value)" onkeydown="if(event.key==='Enter')signup()">
-    <div class="hint" id="nameHint"></div>
-    <button class="btn" id="btnNext" onclick="signup()">Continue <svg class="ic"><use href="#i-arrow-right"/></svg></button>
-  </div>
+      <h2>
+        <svg class="ic" style="margin-right:6px"><use href="#i-user"/></svg>
+        Create your account
+      </h2>
+      <p class="sub">Choose a username — that's the only thing you'll ever type to sign in. Your phone does the rest.</p>
 
-  <div class="card" id="step2" style="display:none">
-    <h2><svg class="ic"><use href="#i-phone"/></svg> Add your phone</h2>
-    <p class="sub">Scan with your phone's camera, then tap <b>Make this my key</b>.
-       The link expires in 10 minutes.</p>
-    <div class="qr" id="qrBox"></div>
-    <div class="center"><span class="pill mono" id="enrollLink"></span></div>
-    <div class="status" id="waitStatus">
-      <span class="wave anim" style="height:12px"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-      &nbsp;Waiting for your phone…
+      <label for="username">
+        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
+        Username
+      </label>
+      <input type="text" id="username" placeholder="e.g. kwame.a" autocomplete="off" spellcheck="false"
+             oninput="checkName(this.value)" onkeydown="if(event.key==='Enter')focusPassword()">
+      <div class="hint" id="nameHint"></div>
+
+      <!-- Backup password section -->
+      <label for="password">
+        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-lock"/></svg>
+        Backup Password
+      </label>
+
+      <!-- Notice box explaining backup password -->
+      <div class="notice-box">
+        <svg class="ic" style="width:18px;height:18px;flex-shrink:0"><use href="#i-info"/></svg>
+        <div>
+          <strong>This is a backup — not your main way to sign in.</strong><br>
+          Echo signs you in using sound from your phone. This password is only used if your phone is unavailable.
+        </div>
+      </div>
+
+      <div class="pass-wrap" style="margin-top: 10px;">
+        <input type="password" id="password" placeholder="At least 8 characters"
+               oninput="checkStrength(this.value)"
+               onkeydown="if(event.key==='Enter')document.getElementById('confirmPassword').focus()">
+        <button type="button" class="eye-btn" onclick="toggleEye('password','eyeIcon1')" title="Show / hide password">
+          <svg class="ic" id="eyeIcon1"><use href="#i-eye"/></svg>
+        </button>
+      </div>
+
+      <!-- Strength bar -->
+      <div class="strength-bar" id="strengthBar" data-level="0">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <div class="strength-label" id="strengthLabel"></div>
+
+      <label for="confirmPassword">
+        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-lock"/></svg>
+        Confirm Backup Password
+      </label>
+      <div class="pass-wrap">
+        <input type="password" id="confirmPassword" placeholder="Type the same password again"
+               oninput="checkMatch()"
+               onkeydown="if(event.key==='Enter')signup()">
+        <button type="button" class="eye-btn" onclick="toggleEye('confirmPassword','eyeIcon2')" title="Show / hide password">
+          <svg class="ic" id="eyeIcon2"><use href="#i-eye"/></svg>
+        </button>
+      </div>
+      <div class="hint" id="passHint"></div>
+
+      <button class="btn" id="btnNext" onclick="signup()">
+        Continue
+        <svg class="ic"><use href="#i-arrow-right"/></svg>
+      </button>
     </div>
-    <div class="divider">testing on one machine?</div>
-    <button class="btn ghost" onclick="window.open(enrollUrl,'_blank')">Enroll this device instead (dev)</button>
-  </div>
 
-  <div class="card center" id="step3" style="display:none">
-    <div class="bigico"><svg class="ic lg"><use href="#i-check"/></svg></div>
-    <h2 style="justify-content:center">You're all set, <span id="doneName"></span></h2>
-    <p class="sub">Your phone is now your key. One last thing after you sign in:
-       generate your <b>recovery codes</b> from the dashboard — they're your way
-       back in if your phone is lost or replaced.</p>
-    <button class="btn" onclick="location.href='login.html'">Sign in with Echo</button>
+    <!-- ── Step 2: scan QR ── -->
+    <div class="card" id="step2" style="display:none">
+      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="word">echo</span>
+      </div>
+      <h2>
+        <svg class="ic"><use href="#i-phone"/></svg>
+        Add your phone
+      </h2>
+      <p class="sub">Open your phone's camera, scan the code below, then tap <b>"Make this my key"</b>. The link expires in 10 minutes.</p>
+      <div class="qr" id="qrBox"></div>
+      <div class="center"><span class="pill mono" id="enrollLink"></span></div>
+      <div class="status" id="waitStatus">
+        <span class="wave anim" style="height:12px"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        &nbsp;Waiting for your phone…
+      </div>
+      <div class="divider">Don't have your phone with you right now?</div>
+      <button class="btn ghost" onclick="window.open(enrollUrl,'_blank')">
+        <svg class="ic"><use href="#i-monitor"/></svg>
+        Open the link on this computer instead
+      </button>
+    </div>
+
+    <!-- ── Step 3: all done ── -->
+    <div class="card center" id="step3" style="display:none">
+      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="word">echo</span>
+      </div>
+      <div class="bigico" style="margin-top: 14px;"><svg class="ic lg"><use href="#i-check"/></svg></div>
+      <h2 style="justify-content:center">You're all set, <span id="doneName"></span>!</h2>
+      <p class="sub">Your phone is now your key. Sign in anytime — just have Echo open on your phone and we'll do the rest.</p>
+      <button class="btn" onclick="location.href='login.html'">
+        <svg class="ic"><use href="#i-volume"/></svg>
+        Sign in with Echo
+      </button>
+    </div>
+
+    <div class="status" style="margin-top: 24px;">Already have an account? <a class="text" href="login.html">Sign in</a></div>
   </div>
 </div>
 
@@ -58,29 +132,104 @@
 const $ = id => document.getElementById(id);
 let enrollUrl = null, pollTimer = null;
 
+/* ── username validation ── */
 function checkName(v) {
   const ok = /^[a-z0-9_.-]{2,32}$/.test(v.trim().toLowerCase());
   const h = $('nameHint');
   if (!v.trim()) { h.textContent = ''; h.className = 'hint'; return; }
-  h.textContent = ok ? 'Looks good' : '2–32 characters: letters, numbers, _ . -';
+  h.textContent = ok ? '✓ Looks good' : 'Use 2–32 characters: letters, numbers, underscore, dot, or dash';
   h.className = ok ? 'hint ok' : 'hint bad';
 }
 
+function focusPassword() {
+  $('password').focus();
+}
+
+/* ── password strength ── */
+function checkStrength(v) {
+  let score = 0;
+  if (v.length >= 8)  score++;
+  if (v.length >= 12) score++;
+  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+  if (/[0-9]/.test(v) || /[^a-zA-Z0-9]/.test(v)) score++;
+
+  const bar   = $('strengthBar');
+  const label = $('strengthLabel');
+  bar.dataset.level = v.length === 0 ? '0' : score;
+
+  const levels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  const cls    = ['',  's1',  's2',  's3',   's4'];
+  label.textContent = v.length === 0 ? '' : levels[score];
+  label.className   = 'strength-label ' + (v.length ? cls[score] : '');
+
+  checkMatch();
+}
+
+/* ── confirm password match ── */
+function checkMatch() {
+  const p  = $('password').value;
+  const cp = $('confirmPassword').value;
+  const h  = $('passHint');
+  if (!cp) { h.textContent = ''; h.className = 'hint'; return; }
+  if (p === cp) { h.textContent = '✓ Passwords match'; h.className = 'hint ok'; }
+  else          { h.textContent = 'Passwords do not match'; h.className = 'hint bad'; }
+}
+
+/* ── show / hide password ── */
+function toggleEye(inputId, iconId) {
+  const inp  = $(inputId);
+  const icon = $(iconId);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  icon.querySelector('use').setAttribute('href', show ? '#i-eye-off' : '#i-eye');
+}
+
+/* ── signup submit ── */
 async function signup() {
   const username = $('username').value.trim().toLowerCase();
-  if (!username) return;
+  const password = $('password').value;
+  const confirm  = $('confirmPassword').value;
+
+  if (!username) {
+    $('nameHint').textContent = 'Please enter a username';
+    $('nameHint').className = 'hint bad';
+    $('username').focus();
+    return;
+  }
+  if (!/^[a-z0-9_.-]{2,32}$/.test(username)) {
+    $('nameHint').textContent = 'Username has invalid characters';
+    $('nameHint').className = 'hint bad';
+    return;
+  }
+  if (password.length < 8) {
+    $('passHint').textContent = 'Your backup password must be at least 8 characters';
+    $('passHint').className = 'hint bad';
+    $('password').focus();
+    return;
+  }
+  if (password !== confirm) {
+    $('passHint').textContent = 'The passwords you entered do not match';
+    $('passHint').className = 'hint bad';
+    $('confirmPassword').focus();
+    return;
+  }
+
+  $('passHint').textContent = '';
   $('btnNext').disabled = true;
+
   const r = await fetch('/api/signup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username })
+    body: JSON.stringify({ username, password })
   }).catch(() => null);
+
   if (!r || !r.ok) {
-    const err = r ? (await r.json().catch(() => ({}))).error : 'Server unreachable — is it running?';
-    $('nameHint').textContent = err || 'Signup failed';
+    const err = r ? (await r.json().catch(() => ({}))).error : 'Cannot reach the server — is it running?';
+    $('nameHint').textContent = err || 'Sign-up failed — please try again';
     $('nameHint').className = 'hint bad';
     $('btnNext').disabled = false;
     return;
   }
+
   const data = await r.json();
   enrollUrl = location.origin + '/phone/phone.html?token=' + data.enrollToken;
   $('doneName').textContent = data.username;
@@ -110,7 +259,7 @@ function poll(token) {
     } else if (s.expired) {
       clearInterval(pollTimer);
       $('waitStatus').className = 'status bad';
-      $('waitStatus').textContent = 'Link expired — refresh to start again.';
+      $('waitStatus').textContent = 'The link has expired. Refresh this page to start again.';
     }
   }, 2000);
 }
