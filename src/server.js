@@ -49,7 +49,7 @@ app.use((_req, res, next) => {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",   // ggwave inline init
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'",   // ggwave inline init & wasm
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "connect-src 'self' wss:",              // WebSocket sign-in channel
