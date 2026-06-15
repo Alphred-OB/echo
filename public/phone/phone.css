@@ -568,3 +568,97 @@ input[type=password]:focus {
   padding: 40px 20px;
 }
 .empty-state .bigico { margin-bottom: 24px; }
+
+/* ── Scanner overlay ── */
+.scanner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(9, 13, 22, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: slide-up-bg 0.3s ease;
+}
+
+.scanner-container {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 1;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  background: #000;
+}
+
+.scanner-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Viewfinder overlay box to focus camera scanning */
+.scanner-viewfinder {
+  position: absolute;
+  inset: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--r-md);
+  box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.scanner-viewfinder::before,
+.scanner-viewfinder::after,
+.scanner-viewfinder-corners::before,
+.scanner-viewfinder-corners::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: var(--accent);
+  border-style: solid;
+  pointer-events: none;
+}
+
+/* Corners indicator */
+.scanner-viewfinder::before { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-top-left-radius: var(--r-sm); }
+.scanner-viewfinder::after { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-top-right-radius: var(--r-sm); }
+.scanner-viewfinder-corners::before { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: var(--r-sm); }
+.scanner-viewfinder-corners::after { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: var(--r-sm); }
+
+/* Scanner laser line animation */
+.scanner-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: laser-move 2s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes laser-move {
+  0% { top: 20px; }
+  50% { top: calc(100% - 20px); }
+  100% { top: 20px; }
+}
+
+.scanner-title {
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.scanner-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  margin-bottom: 24px;
+  text-align: center;
+  line-height: 1.4;
+}

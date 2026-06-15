@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Echo Key">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="../ggwave.js"></script>
+<script src="../jsQR.js"></script>
 </head>
 <body>
 <script src="../icons.js"></script>
@@ -28,10 +29,15 @@
       <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
       <span class="word">echo <span>key</span></span>
     </a>
-    <button class="install-badge" id="installBadge" style="display:none" type="button">
-      <svg class="ic sm"><use href="#i-download"/></svg>
-      Install app
-    </button>
+    <div style="display:flex; align-items:center; gap:8px">
+      <button class="install-badge" id="installBadge" style="display:none" type="button">
+        <svg class="ic sm"><use href="#i-download"/></svg>
+        Install app
+      </button>
+      <button id="headerScannerBtn" onclick="startScanner()" type="button" aria-label="Scan QR Code" style="background:none; border:none; color:var(--text); cursor:pointer; padding:6px; display:inline-flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent">
+        <svg class="ic"><use href="#i-camera"/></svg>
+      </button>
+    </div>
   </header>
 
   <!-- Scrollable content area -->
@@ -135,6 +141,10 @@
           you can scan to turn this phone into your key.
           Already have an account? Add this device from your dashboard.
         </p>
+        <button class="btn primary" onclick="startScanner()" style="margin-bottom:12px">
+          <svg class="ic"><use href="#i-camera"/></svg>
+          Scan QR Code
+        </button>
         <button class="btn ghost" onclick="location.href='../web/signup.html'">
           <svg class="ic"><use href="#i-arrow-right"/></svg>
           Create an account
@@ -193,6 +203,28 @@
 </div>
 
 <!-- ══════════════════════════════════════════
+     SCANNER OVERLAY — full screen camera
+     ══════════════════════════════════════════ -->
+<div class="scanner-overlay" id="scannerCard" style="display:none">
+  <div class="scanner-title">Scan Enrollment QR Code</div>
+  <div class="scanner-subtitle">Align the QR code inside the viewfinder window</div>
+  
+  <div class="scanner-container">
+    <video class="scanner-video" id="scannerVideo" autoplay playsinline></video>
+    <div class="scanner-viewfinder">
+      <div class="scanner-viewfinder-corners"></div>
+      <div class="scanner-laser"></div>
+    </div>
+  </div>
+
+  <button class="btn ghost" onclick="stopScanner()" style="color:#fff; border-color:rgba(255,255,255,0.3); margin-top:24px; max-width:280px">
+    <svg class="ic"><use href="#i-x"/></svg>
+    Cancel
+  </button>
+</div>
+
+
+<!-- ══════════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════════ -->
 <script>
@@ -200,6 +232,83 @@ let ggwave = null, context = null, instance = null;
 let mediaStream = null, recorder = null, stream = null, listening = false;
 let pendingNonce = null, lastNonce = null, deferredInstall = null;
 let manualOpen = false;
+
+// Scanner variables & functions
+let scannerVideo = null, scannerStream = null, scannerCanvas = null, scannerActive = false;
+
+async function startScanner() {
+  if (listening) stopListen();
+  if (scannerActive) return;
+
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 640 } }
+    });
+  } catch (err) {
+    alert('Could not access your camera. Please ensure camera permissions are granted.');
+    console.error('Camera access error:', err);
+    return;
+  }
+
+  scannerVideo = $('scannerVideo');
+  scannerVideo.srcObject = scannerStream;
+  $('scannerCard').style.display = 'flex';
+  scannerActive = true;
+  requestAnimationFrame(scanFrame);
+}
+
+function stopScanner() {
+  if (!scannerActive) return;
+
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  if (scannerVideo) {
+    scannerVideo.srcObject = null;
+  }
+
+  $('scannerCard').style.display = 'none';
+  scannerActive = false;
+}
+
+function scanFrame() {
+  if (!scannerActive) return;
+
+  if (scannerVideo.readyState === scannerVideo.HAVE_ENOUGH_DATA) {
+    if (!scannerCanvas) {
+      scannerCanvas = document.createElement('canvas');
+    }
+    scannerCanvas.width = scannerVideo.videoWidth;
+    scannerCanvas.height = scannerVideo.videoHeight;
+    const ctx = scannerCanvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(scannerVideo, 0, 0, scannerCanvas.width, scannerCanvas.height);
+
+    const imgData = ctx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
+    const code = jsQR(imgData.data, imgData.width, imgData.height, {
+      inversionAttempts: 'dontInvert'
+    });
+
+    if (code) {
+      console.log('Scanned QR code:', code.data);
+      try {
+        const url = new URL(code.data);
+        const token = url.searchParams.get('token');
+        if (token) {
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          stopScanner();
+          const newUrl = window.location.origin + window.location.pathname + '?token=' + token;
+          window.history.replaceState(null, '', newUrl);
+          route();
+          return;
+        }
+      } catch (e) {
+        // Ignored
+      }
+    }
+  }
+  requestAnimationFrame(scanFrame);
+}
 
 const $ = id => document.getElementById(id);
 
@@ -341,6 +450,7 @@ function convertTypedArray(src, type) {
 function toggleListen() { listening ? stopListen() : startListen(); }
 
 function startListen() {
+  stopScanner();
   if (!ggwave) { setStatus('Sound module still loading — try again in a moment.', 'bad'); return; }
   ensureAudio();
 
