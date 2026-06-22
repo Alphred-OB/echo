@@ -7,6 +7,12 @@
 <meta name="description" content="Integrate ultrasonic passwordless authentication into your server backend with simple REST endpoints and keys.">
 <link rel="stylesheet" href="../echo.css">
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<script>
+(function() {
+  const savedTheme = localStorage.getItem('echo-theme');
+  document.documentElement.setAttribute('data-theme', savedTheme || 'light');
+})();
+</script>
 <style>
   .wrap.docs { max-width: 880px; padding-top: 120px; }
   .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--border); margin-bottom: 20px; padding-bottom: 8px; }

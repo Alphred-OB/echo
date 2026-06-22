@@ -7,6 +7,12 @@
 <meta name="description" content="An overview of the acoustics and cryptography behind near-ultrasonic passwordless sign-ins.">
 <link rel="stylesheet" href="../echo.css">
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<script>
+(function() {
+  const savedTheme = localStorage.getItem('echo-theme');
+  document.documentElement.setAttribute('data-theme', savedTheme || 'light');
+})();
+</script>
 <style>
   .wrap.tech { max-width: 880px; padding-top: 120px; }
   .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 40px 0; }

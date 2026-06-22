@@ -173,6 +173,10 @@ app.post('/api/login/start', (req, res) => {
   const sessionId = rand(16);
   // 96-bit nonce encodes compactly into a short ggwave transmission
   const nonce = rand(12);
+
+  // Expire all previous pending sessions for this user instantly to prevent concurrent code harvesting
+  db.prepare(`UPDATE login_sessions SET used = 1 WHERE username = ? AND used = 0`).run(uname);
+
   db.prepare(`INSERT INTO login_sessions (id, username, nonce, expires_at, created_at)
               VALUES (?, ?, ?, ?, ?)`).run(sessionId, uname, nonce, now() + NONCE_TTL_MS, now());
 

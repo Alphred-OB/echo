@@ -43,10 +43,10 @@
 
   /* Live sound demo card */
   .demo { padding: 32px; background: var(--surface-card); }
-  #spec { display: block; width: 100%; height: 190px; border: 1px solid var(--border); border-radius: var(--r-md); background: #ffffff; }
+  #spec { display: block; width: 100%; height: 190px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
   .demo .bar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
   .demo .bar .btn { width: auto; margin: 0; padding: 12px 24px; }
-  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 99px; overflow: hidden; background: #f1f5f9; padding: 3px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 99px; overflow: hidden; background: var(--bg); padding: 3px; }
   .seg button { border: none; background: transparent; color: var(--muted); padding: 8px 16px; font-size: var(--fs-small); font-weight: 600; cursor: pointer; border-radius: 99px; transition: all 0.2s; }
   .seg button.on { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2); }
   .demo .meta { margin-left: auto; font-size: var(--fs-small); color: var(--muted); display: flex; align-items: center; gap: 8px; }
@@ -134,6 +134,9 @@
       <a class="link" href="integration.html">Developer</a>
       <a class="link" href="login.html">Sign in</a>
       <a class="link primary" href="signup.html">Create account</a>
+      <button id="themeToggle" class="link" style="border: none; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; color: var(--muted); margin: 0 4px; vertical-align: middle;" onclick="toggleTheme()" aria-label="Toggle Theme">
+        <svg class="ic" style="width: 18px; height: 18px; margin: 0;"><use id="themeToggleIcon" href="#i-moon"/></svg>
+      </button>
     </span>
   </nav>
 
@@ -151,26 +154,7 @@
     <canvas id="heroCanvas" aria-hidden="true"></canvas>
   </header>
 
-  <section class="sec rv">
-    <div class="bento-stats">
-      <div class="bento-card">
-        <div class="val">0</div>
-        <div class="lbl">passwords stored</div>
-      </div>
-      <div class="bento-card">
-        <div class="val">96<em>-bit</em></div>
-        <div class="lbl">one-time codes</div>
-      </div>
-      <div class="bento-card">
-        <div class="val">30<em>s</em></div>
-        <div class="lbl">code lifetime</div>
-      </div>
-      <div class="bento-card">
-        <div class="val">~2<em>m</em></div>
-        <div class="lbl">proximity range</div>
-      </div>
-    </div>
-  </section>
+
 
   <!-- Bento-Style Features Grid -->
   <section class="sec rv" id="features">
@@ -316,42 +300,83 @@ app.post(<span style="color: #38bdf8;">'/api/login/verify'</span>, <span style="
   </section>
 
   <section class="sec rv" id="security">
-    <span class="kicker">Security model</span>
-    <h2>Questions worth asking</h2>
-    <p class="lead">The honest cryptographic parameters, including structural boundaries.</p>
+    <span class="kicker">Real-world Security</span>
+    <h2>Challenges & How We Solve Them</h2>
+    <p class="lead">How Echo handles physical limitations, background noise, and remote attackers.</p>
 
-    <details class="faq">
-      <summary><svg class="ic"><use href="#i-refresh"/></svg> What if someone records the sound and replays it?
-        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">Nothing happens. Every sign-in plays a <b>different</b> sound — a fresh random
-        96-bit code that is burned the moment it is submitted and expires after 30 seconds.
-        A recording is a ticket that has already been torn. Replays are explicitly caught and rejected.</div>
-    </details>
-    <details class="faq">
-      <summary><svg class="ic"><use href="#i-phone"/></svg> What if someone steals my phone?
-        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">They still need to bypass your phone's biometric or PIN locks. Every sign-in shows an explicit <b>approve / deny</b> prompt. From any other signed-in device, you can <b>revoke</b> the compromised phone instantly, turning its public key key-pairs into junk.</div>
-    </details>
-    <details class="faq">
-      <summary><svg class="ic"><use href="#i-key"/></svg> What if I lose or change my phone?
-        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">Sign in using one of your single-use <b>recovery codes</b> generated from your dashboard, register the new phone, and revoke the old one. Recovery attempts are rate-limited to 5 per 15 minutes.</div>
-    </details>
-    <details class="faq">
-      <summary><svg class="ic"><use href="#i-volume"/></svg> Does it work in a noisy room?
-        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">Yes. Human voices, music, and background noises live far below the 18–20 kHz band Echo uses, and the ggwave protocol contains forward error correction. If audio hardware struggles, there is an <b>audible fallback</b> mode.</div>
-    </details>
-    <details class="faq">
-      <summary><svg class="ic"><use href="#i-shield"/></svg> What does the server actually store?
-        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">Your username, enrolled devices' <b>public JWK keys</b>, and hashed recovery codes. No passwords exist anywhere on our infrastructure. A complete database breach exposes zero secrets.</div>
-    </details>
-    <details class="faq">
-      <summary><svg class="ic"><use href="#i-alert"/></svg> What are the known limits?
-        <svg class="ic chev"><use href="#i-arrow-right"/></svg></summary>
-      <div class="body">A live <b>relay attack</b> — where an attacker streams the sound in real time to an accomplice near your phone — is a documented limitation. Precise time-of-flight checks require low-level hardware control that browsers cannot access.</div>
-    </details>
+    <div class="bento-stats" style="grid-template-columns: repeat(2, 1fr); margin-top: 24px; gap: 20px;">
+      <div class="bento-card" style="grid-column: span 1; padding: 28px;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.15rem; color: var(--text);">
+          <svg class="ic" style="margin-right: 6px; color: var(--bad); vertical-align: -2px;"><use href="#i-refresh"/></svg> Replay Attacks (Recorded Sound)
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin-bottom: 16px; line-height: 1.6;">
+          <strong>Challenge:</strong> An attacker records the sound played by your computer speaker and plays it back later to try to log in.
+        </p>
+        <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
+          ✔ <strong>Solution:</strong> Every login uses a brand-new random code. The server deletes the code instantly when verified, and it expires after 30 seconds. Additionally, requesting a new code instantly invalidates any old code.
+        </p>
+      </div>
+
+      <div class="bento-card" style="grid-column: span 1; padding: 28px;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.15rem; color: var(--text);">
+          <svg class="ic" style="margin-right: 6px; color: var(--bad); vertical-align: -2px;"><use href="#i-phone"/></svg> Stolen or Unlocked Devices
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin-bottom: 16px; line-height: 1.6;">
+          <strong>Challenge:</strong> An attacker steals your physical phone to approve a login request.
+        </p>
+        <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
+          ✔ <strong>Solution:</strong> We assume personal phones are naturally secured via lock-screen checks (fingerprint or PIN). Because the key is protected by the phone's secure storage, it remains inaccessible without unlocking. You can also instantly revoke any stolen phone from another active browser.
+        </p>
+      </div>
+
+      <div class="bento-card" style="grid-column: span 1; padding: 28px;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.15rem; color: var(--text);">
+          <svg class="ic" style="margin-right: 6px; color: var(--bad); vertical-align: -2px;"><use href="#i-volume"/></svg> Loud Noise & Hardware Issues
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin-bottom: 16px; line-height: 1.6;">
+          <strong>Challenge:</strong> Ambient noise (music, talking) or bad quality speakers/microphones block the sound wave.
+        </p>
+        <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
+          ✔ <strong>Solution:</strong> The signal uses audio error correction. If the silent ultrasound fails, the app lets you play an audible code, or sign in using a backup password.
+        </p>
+      </div>
+
+      <div class="bento-card" style="grid-column: span 1; padding: 28px;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.15rem; color: var(--text);">
+          <svg class="ic" style="margin-right: 6px; color: var(--bad); vertical-align: -2px;"><use href="#i-alert"/></svg> Remote Phishing Attempts
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin-bottom: 16px; line-height: 1.6;">
+          <strong>Challenge:</strong> A fake login website tries to trick your phone into signing an approval request.
+        </p>
+        <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
+          ✔ <strong>Solution:</strong> The signature is mathematically tied to the specific domain. The phone communicates directly with the real server, keeping the middleman out of the loop.
+        </p>
+      </div>
+
+      <div class="bento-card" style="grid-column: span 1; padding: 28px;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.15rem; color: var(--text);">
+          <svg class="ic" style="margin-right: 6px; color: var(--bad); vertical-align: -2px;"><use href="#i-logout"/></svg> Phone Unavailable / Unwanted
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin-bottom: 16px; line-height: 1.6;">
+          <strong>Challenge:</strong> You do not want to use your phone to sign in, or your phone battery is dead.
+        </p>
+        <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
+          ✔ <strong>Solution:</strong> You can choose to sign in using your backup account password, or use one of the single-use recovery codes generated from your dashboard.
+        </p>
+      </div>
+
+      <div class="bento-card" style="grid-column: span 1; padding: 28px;">
+        <div style="margin-bottom: 12px; font-weight: 800; font-size: 1.15rem; color: var(--text);">
+          <svg class="ic" style="margin-right: 6px; color: var(--bad); vertical-align: -2px;"><use href="#i-monitor"/></svg> Browser Compatibility
+        </div>
+        <p style="color: var(--muted); font-size: var(--fs-small); margin-bottom: 16px; line-height: 1.6;">
+          <strong>Challenge:</strong> Your older computer or phone doesn\'t support the secure microphone or cryptography APIs.
+        </p>
+        <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
+          ✔ <strong>Solution:</strong> The system detects feature support immediately. If standard APIs are missing, the login falls back automatically to traditional password verification.
+        </p>
+      </div>
+    </div>
   </section>
 
   <section class="bottom-cta rv">
@@ -601,16 +626,17 @@ drawSpec();
 
 /* ---------- how-it-works stepper ---------- */
 const CAPTIONS = [
-  'Your computer asks the Echo server for a one-time code — a fresh random 96-bit value that will only ever be valid once, for 30 seconds.',
-  'The computer plays the code through its speaker at 18–20 kHz. You hear nothing. Your phone, listening nearby, decodes it instantly.',
-  'Your phone shows who is signing in and waits for your approval, then signs the code with a private key that physically cannot leave the device.',
-  'The server checks the signature against your enrolled public key and opens the session on your computer. Total time: a few seconds.'
+  'Step 1: Your computer asks the server to start a sign-in. The server creates a secret random code that only works once and expires after 30 seconds.',
+  'Step 2: Your computer plays this secret code out loud using high-pitched sound waves that humans cannot hear. Your phone listens through its microphone and decodes the secret code instantly.',
+  'Step 3: Your phone checks with the server to make sure the code is valid. Once you approve on your screen (using your fingerprint or PIN), your phone signs the code using a secure key saved inside your phone.',
+  'Step 4: Your phone sends this secure signature back to the server. The server verifies it, deletes the one-time code so it can never be used again, and logs your computer in automatically.'
 ];
+
 let step = 0, autoTimer = null, pauseTimer = null;
 
 function startAuto() {
   clearInterval(autoTimer);
-  autoTimer = setInterval(() => goStep((step + 1) % 4), 3400);
+  autoTimer = setInterval(() => goStep((step + 1) % 4), 8000); // 8s duration for thorough reading
 }
 
 function goStep(n, manual) {
@@ -631,7 +657,7 @@ function goStep(n, manual) {
   if (manual) {
     clearInterval(autoTimer); autoTimer = null;
     clearTimeout(pauseTimer);
-    pauseTimer = setTimeout(startAuto, 6000);
+    pauseTimer = setTimeout(startAuto, 12000);
   }
 }
 
@@ -643,6 +669,30 @@ const io = new IntersectionObserver(es => es.forEach(e => {
   if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
 }), { threshold: .12 });
 document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+/* ---------- theme management ---------- */
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('echo-theme', newTheme);
+  updateThemeIcon(newTheme);
+}
+
+function updateThemeIcon(theme) {
+  const icon = document.getElementById('themeToggleIcon');
+  if (icon) {
+    icon.setAttribute('href', theme === 'dark' ? '#i-sun' : '#i-moon');
+  }
+}
+
+// Initialise theme
+(function initTheme() {
+  const savedTheme = localStorage.getItem('echo-theme');
+  const initialTheme = savedTheme || 'light';
+  document.documentElement.setAttribute('data-theme', initialTheme);
+  updateThemeIcon(initialTheme);
+})();
 </script>
 </body>
 </html>

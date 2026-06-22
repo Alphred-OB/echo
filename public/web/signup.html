@@ -7,6 +7,12 @@
 <link rel="stylesheet" href="../echo.css">
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <script src="../qrcode.js"></script>
+<script>
+(function() {
+  const savedTheme = localStorage.getItem('echo-theme');
+  document.documentElement.setAttribute('data-theme', savedTheme || 'light');
+})();
+</script>
 </head>
 <body>
 <script src="../icons.js"></script>

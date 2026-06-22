@@ -29,6 +29,32 @@
   --r-xl:         28px;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --text:         #f8fafc;
+    --muted:        #94a3b8;
+    --dim:          #64748b;
+    --border:       rgba(255, 255, 255, 0.08);
+    --border-strong:rgba(255, 255, 255, 0.16);
+    --surface:      #101726;
+    --bg:           #090d16;
+    --accent-soft:  rgba(37, 99, 235, 0.12);
+    --accent-glow:  rgba(37, 99, 235, 0.35);
+  }
+}
+
+[data-theme="dark"] {
+  --text:         #f8fafc;
+  --muted:        #94a3b8;
+  --dim:          #64748b;
+  --border:       rgba(255, 255, 255, 0.08);
+  --border-strong:rgba(255, 255, 255, 0.16);
+  --surface:      #101726;
+  --bg:           #090d16;
+  --accent-soft:  rgba(37, 99, 235, 0.12);
+  --accent-glow:  rgba(37, 99, 235, 0.35);
+}
+
 html {
   height: 100%;
   /* Allow WebKit to use safe-area env() */
