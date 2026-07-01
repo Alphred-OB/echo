@@ -69,12 +69,12 @@
 
       <div class="divider">Don't have your phone with you?</div>
       <button class="btn ghost" onclick="showRecovery()">
-        <svg class="ic"><use href="#i-key"/></svg>
-        Sign in with backup password
+        <svg class="ic"><use href="#i-mail"/></svg>
+        Sign in with Magic Link
       </button>
     </div>
 
-    <!-- ── Backup password card ── -->
+    <!-- ── Magic Link Recovery Card ── -->
     <div class="card" id="recoveryCard" style="display:none">
       <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
         <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
@@ -82,42 +82,29 @@
       </div>
 
       <h2>
-        <svg class="ic" style="margin-right:6px"><use href="#i-key"/></svg>
-        Backup Sign-in
+        <svg class="ic" style="margin-right:6px"><use href="#i-mail"/></svg>
+        Magic Link Sign-in
       </h2>
 
       <div class="notice-box">
         <svg class="ic" style="width:18px;height:18px;flex-shrink:0"><use href="#i-info"/></svg>
         <div>
-          This is your <strong>backup option</strong> — use it when your phone isn't available. Echo normally signs you in silently using sound.
+          This is your <strong>backup option</strong> — use it when your phone isn't available. We'll send a time-limited sign-in link to your email.
         </div>
       </div>
 
-      <label for="rUsername">
+      <label for="rUsernameOrEmail">
         <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
-        Username
+        Username or Email
       </label>
-      <input type="text" id="rUsername" autocomplete="username" placeholder="your username" spellcheck="false"
-             onkeydown="if(event.key==='Enter')document.getElementById('rPassword').focus()">
-
-      <label for="rPassword">
-        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-lock"/></svg>
-        Backup Password
-      </label>
-      <div class="pass-wrap">
-        <input type="password" id="rPassword" placeholder="your backup password"
-               autocomplete="current-password"
-               onkeydown="if(event.key==='Enter')recoveryLogin()">
-        <button type="button" class="eye-btn" onclick="toggleEye('rPassword','rEyeIcon')" title="Show / hide password">
-          <svg class="ic" id="rEyeIcon"><use href="#i-eye"/></svg>
-        </button>
-      </div>
+      <input type="text" id="rUsernameOrEmail" placeholder="your username or email" spellcheck="false"
+             onkeydown="if(event.key==='Enter')sendMagicLink()">
 
       <div class="status" id="rStatus"></div>
 
-      <button class="btn" id="btnRecovery" onclick="recoveryLogin()">
-        <svg class="ic"><use href="#i-key"/></svg>
-        Sign in
+      <button class="btn" id="btnRecovery" onclick="sendMagicLink()">
+        <svg class="ic"><use href="#i-mail"/></svg>
+        Send Magic Link
       </button>
       <button class="btn ghost" style="margin-top:10px" onclick="hideRecovery()">
         <svg class="ic"><use href="#i-volume"/></svg>
@@ -280,34 +267,34 @@ function fail(msg) {
 function showRecovery() {
   $('soundCard').style.display = 'none';
   $('recoveryCard').style.display = '';
-  $('rUsername').value = $('username').value;
+  $('rUsernameOrEmail').value = $('username').value;
 }
 function hideRecovery() {
   $('recoveryCard').style.display = 'none';
   $('soundCard').style.display = '';
 }
 
-async function recoveryLogin() {
-  const username = $('rUsername').value.trim();
-  const password = $('rPassword').value;
-  if (!username || !password) {
+async function sendMagicLink() {
+  const usernameOrEmail = $('rUsernameOrEmail').value.trim();
+  if (!usernameOrEmail) {
     $('rStatus').className = 'status bad';
-    $('rStatus').textContent = 'Please fill in both your username and backup password';
+    $('rStatus').textContent = 'Please enter your username or email address';
     return;
   }
   $('btnRecovery').disabled = true;
-  const r = await fetch('/api/login/recovery', {
+  $('rStatus').className = 'status ok';
+  $('rStatus').textContent = 'Sending magic link...';
+  const r = await fetch('/api/login/magic-request', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ usernameOrEmail })
   }).catch(() => null);
   if (r && r.ok) {
     $('rStatus').className = 'status ok';
-    $('rStatus').textContent = 'Signed in — taking you to your dashboard…';
-    setTimeout(() => location.href = 'dashboard.html', 900);
+    $('rStatus').textContent = 'Magic link sent! Please check your email inbox.';
   } else {
     const err = r ? (await r.json().catch(() => ({}))).error : 'Cannot reach the server';
     $('rStatus').className = 'status bad';
-    $('rStatus').textContent = err || 'Sign-in failed — check your username and password';
+    $('rStatus').textContent = err || 'Failed to send magic link.';
     $('btnRecovery').disabled = false;
   }
 }

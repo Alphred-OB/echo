@@ -269,12 +269,7 @@
     </div>
   </div>
 
-  <!-- Backup password not set banner -->
-  <div class="banner warn" id="pwBanner" style="display:none">
-    <svg class="ic" style="flex:none; margin-top:2px"><use href="#i-alert"/></svg>
-    <div><b>No backup password set.</b> If you lose your phone, you won't be able to sign in.
-    Set a backup password now so you always have a way back in.</div>
-  </div>
+  <!-- Banners removed since email is required on signup -->
 
   <!-- KPI stat cards -->
   <div class="kpis">
@@ -285,11 +280,11 @@
         <div class="l">Enrolled devices</div>
       </div>
     </div>
-    <div class="kpi green" id="kpiPwCard">
-      <div class="kpi-icon"><svg class="ic lg"><use href="#i-lock"/></svg></div>
+    <div class="kpi green" id="kpiEmailCard">
+      <div class="kpi-icon"><svg class="ic lg"><use href="#i-mail"/></svg></div>
       <div class="kpi-content">
-        <div class="n" id="kPwStatus">–</div>
-        <div class="l">Backup password</div>
+        <div class="n" id="kEmailStatus">–</div>
+        <div class="l">Registered email</div>
       </div>
     </div>
     <div class="kpi green">
@@ -320,40 +315,25 @@
       </div>
     </div>
 
-    <!-- Backup password card -->
+    <!-- Email & Security Card -->
     <div class="card">
       <div class="card-head">
-        <h2><svg class="ic"><use href="#i-lock"/></svg> Backup password</h2>
+        <h2><svg class="ic"><use href="#i-mail"/></svg> Email & Security</h2>
       </div>
-      <p class="sub">Your backup way to sign in if your phone is unavailable. Keep this password safe — it's the only way back in without your phone.</p>
-      <div id="pwStatusText" style="font-size:var(--fs-small); color:var(--muted); margin-bottom:16px"></div>
-
-      <!-- Change password form -->
-      <div id="pwForm">
-        <div id="currentPwWrap" style="display:none">
-          <label for="currentPw">Current password</label>
-          <div class="pass-wrap">
-            <input type="password" id="currentPw" placeholder="Enter current password" autocomplete="current-password">
-            <button type="button" class="eye-btn" onclick="toggleEye(this)"><svg class="ic"><use href="#i-eye"/></svg></button>
-          </div>
+      <p class="sub">Your registered email address is used for passwordless login recovery if your phone is ever lost or unavailable.</p>
+      
+      <div style="margin-top: 18px;">
+        <label style="font-weight: 600; font-size: var(--fs-small); color: var(--text);">Backup Email</label>
+        <div id="emailDisplay" style="font-family: monospace; font-size: 15px; font-weight: bold; background: rgba(37, 99, 235, 0.04); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-top: 6px; word-break: break-all; color: var(--text);">
+          <!-- Email will be populated here -->
         </div>
-        <label for="newPw">New password</label>
-        <div class="pass-wrap">
-          <input type="password" id="newPw" placeholder="Enter new password" autocomplete="new-password" oninput="checkStrength()">
-          <button type="button" class="eye-btn" onclick="toggleEye(this)"><svg class="ic"><use href="#i-eye"/></svg></button>
+      </div>
+      
+      <div class="notice-box" style="margin-top: 18px;">
+        <svg class="ic" style="width:18px;height:18px;flex-shrink:0"><use href="#i-info"/></svg>
+        <div>
+          Since Echo is <strong>completely passwordless</strong>, keep your email account secure. Access to your email gives access to your Echo account recovery.
         </div>
-        <div class="strength-bar" id="strengthBar"><span></span><span></span><span></span><span></span></div>
-        <div class="strength-label" id="strengthLabel"></div>
-        <label for="confirmPw">Confirm new password</label>
-        <div class="pass-wrap">
-          <input type="password" id="confirmPw" placeholder="Confirm new password" autocomplete="new-password">
-          <button type="button" class="eye-btn" onclick="toggleEye(this)"><svg class="ic"><use href="#i-eye"/></svg></button>
-        </div>
-        <div class="hint" id="pwHint"></div>
-        <button class="btn" id="btnChangePw" onclick="changePassword()" style="margin-top:18px">
-          <svg class="ic"><use href="#i-lock"/></svg>
-          <span id="pwBtnLabel">Set backup password</span>
-        </button>
       </div>
     </div>
 
@@ -423,16 +403,10 @@ async function load() {
   $('kDevices').textContent = me.devices.length;
   $('kLogins').textContent = me.recentLogins.length;
 
-  // Backup password status
-  const hasPw = me.hasPassword;
-  $('kPwStatus').textContent = hasPw ? 'Set' : 'Not set';
-  $('kpiPwCard').className = hasPw ? 'kpi green' : 'kpi orange';
-  $('pwBanner').style.display = hasPw ? 'none' : '';
-  $('pwStatusText').textContent = hasPw
-    ? 'Your backup password is active. You can change it below.'
-    : 'You don\'t have a backup password yet. Set one below.';
-  $('pwBtnLabel').textContent = hasPw ? 'Change password' : 'Set backup password';
-  $('currentPwWrap').style.display = hasPw ? '' : 'none';
+  // Email status
+  $('kEmailStatus').textContent = me.email ? 'Active' : 'Missing';
+  $('kpiEmailCard').className = me.email ? 'kpi green' : 'kpi orange';
+  $('emailDisplay').textContent = me.email || 'None';
   renderDevices();
   renderActivity();
 }
@@ -511,77 +485,7 @@ async function addDevice() {
   }, 2000);
 }
 
-// ---- Backup password management ----
-function checkStrength() {
-  const pw = $('newPw').value;
-  let level = 0;
-  if (pw.length >= 8) level++;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) level++;
-  if (/\d/.test(pw)) level++;
-  if (/[^A-Za-z0-9]/.test(pw)) level++;
-  $('strengthBar').setAttribute('data-level', pw ? level : 0);
-  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-  const el = $('strengthLabel');
-  el.textContent = pw ? labels[level] : '';
-  el.className = 'strength-label' + (pw ? ' s' + level : '');
-}
-
-function toggleEye(btn) {
-  const inp = btn.previousElementSibling;
-  const show = inp.type === 'password';
-  inp.type = show ? 'text' : 'password';
-  btn.innerHTML = '<svg class="ic"><use href="#i-' + (show ? 'eye-off' : 'eye') + '"/></svg>';
-}
-
-async function changePassword() {
-  const hint = $('pwHint');
-  const currentPw = $('currentPw').value;
-  const newPw = $('newPw').value;
-  const confirmPw = $('confirmPw').value;
-
-  hint.className = 'hint';
-  hint.textContent = '';
-
-  if (!newPw || newPw.length < 8) {
-    hint.className = 'hint bad';
-    hint.textContent = 'Password must be at least 8 characters.';
-    return;
-  }
-  if (newPw !== confirmPw) {
-    hint.className = 'hint bad';
-    hint.textContent = 'Passwords do not match.';
-    return;
-  }
-
-  $('btnChangePw').disabled = true;
-  const body = { newPassword: newPw };
-  if (me.hasPassword) body.currentPassword = currentPw;
-
-  const r = await fetch('/api/password/change', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  }).catch(() => null);
-
-  $('btnChangePw').disabled = false;
-
-  if (!r || !r.ok) {
-    const err = r ? (await r.json().catch(() => ({}))).error : 'Could not reach the server.';
-    hint.className = 'hint bad';
-    hint.textContent = err || 'Something went wrong.';
-    return;
-  }
-
-  hint.className = 'hint ok';
-  hint.textContent = 'Password updated successfully!';
-  $('currentPw').value = '';
-  $('newPw').value = '';
-  $('confirmPw').value = '';
-  $('strengthBar').setAttribute('data-level', 0);
-  $('strengthLabel').textContent = '';
-  load();
-}
-
+// ---- Backup password management removed in favor of Magic Links ----
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
 async function logout() {

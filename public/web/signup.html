@@ -31,59 +31,24 @@
         <svg class="ic" style="margin-right:6px"><use href="#i-user"/></svg>
         Create your account
       </h2>
-      <p class="sub">Choose a username — that's the only thing you'll ever type to sign in. Your phone does the rest.</p>
+      <p class="sub">Choose a username and email. Your phone acts as your security key to sign you in.</p>
 
       <label for="username">
         <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
         Username
       </label>
       <input type="text" id="username" placeholder="e.g. kwame.a" autocomplete="off" spellcheck="false"
-             oninput="checkName(this.value)" onkeydown="if(event.key==='Enter')focusPassword()">
+             oninput="checkName(this.value)" onkeydown="if(event.key==='Enter')document.getElementById('email').focus()">
       <div class="hint" id="nameHint"></div>
 
-      <!-- Backup password section -->
-      <label for="password">
-        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-lock"/></svg>
-        Backup Password
+      <!-- Email section -->
+      <label for="email">
+        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-mail"/></svg>
+        Email Address
       </label>
-
-      <!-- Notice box explaining backup password -->
-      <div class="notice-box">
-        <svg class="ic" style="width:18px;height:18px;flex-shrink:0"><use href="#i-info"/></svg>
-        <div>
-          <strong>This is a backup — not your main way to sign in.</strong><br>
-          Echo signs you in using sound from your phone. This password is only used if your phone is unavailable.
-        </div>
-      </div>
-
-      <div class="pass-wrap" style="margin-top: 10px;">
-        <input type="password" id="password" placeholder="At least 8 characters"
-               oninput="checkStrength(this.value)"
-               onkeydown="if(event.key==='Enter')document.getElementById('confirmPassword').focus()">
-        <button type="button" class="eye-btn" onclick="toggleEye('password','eyeIcon1')" title="Show / hide password">
-          <svg class="ic" id="eyeIcon1"><use href="#i-eye"/></svg>
-        </button>
-      </div>
-
-      <!-- Strength bar -->
-      <div class="strength-bar" id="strengthBar" data-level="0">
-        <span></span><span></span><span></span><span></span>
-      </div>
-      <div class="strength-label" id="strengthLabel"></div>
-
-      <label for="confirmPassword">
-        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-lock"/></svg>
-        Confirm Backup Password
-      </label>
-      <div class="pass-wrap">
-        <input type="password" id="confirmPassword" placeholder="Type the same password again"
-               oninput="checkMatch()"
-               onkeydown="if(event.key==='Enter')signup()">
-        <button type="button" class="eye-btn" onclick="toggleEye('confirmPassword','eyeIcon2')" title="Show / hide password">
-          <svg class="ic" id="eyeIcon2"><use href="#i-eye"/></svg>
-        </button>
-      </div>
-      <div class="hint" id="passHint"></div>
+      <input type="email" id="email" placeholder="e.g. kwame@example.com" autocomplete="off" spellcheck="false"
+             onkeydown="if(event.key==='Enter')signup()">
+      <div class="hint" id="emailHint"></div>
 
       <button class="btn" id="btnNext" onclick="signup()">
         Continue
@@ -147,54 +112,10 @@ function checkName(v) {
   h.className = ok ? 'hint ok' : 'hint bad';
 }
 
-function focusPassword() {
-  $('password').focus();
-}
-
-/* ── password strength ── */
-function checkStrength(v) {
-  let score = 0;
-  if (v.length >= 8)  score++;
-  if (v.length >= 12) score++;
-  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
-  if (/[0-9]/.test(v) || /[^a-zA-Z0-9]/.test(v)) score++;
-
-  const bar   = $('strengthBar');
-  const label = $('strengthLabel');
-  bar.dataset.level = v.length === 0 ? '0' : score;
-
-  const levels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-  const cls    = ['',  's1',  's2',  's3',   's4'];
-  label.textContent = v.length === 0 ? '' : levels[score];
-  label.className   = 'strength-label ' + (v.length ? cls[score] : '');
-
-  checkMatch();
-}
-
-/* ── confirm password match ── */
-function checkMatch() {
-  const p  = $('password').value;
-  const cp = $('confirmPassword').value;
-  const h  = $('passHint');
-  if (!cp) { h.textContent = ''; h.className = 'hint'; return; }
-  if (p === cp) { h.textContent = '✓ Passwords match'; h.className = 'hint ok'; }
-  else          { h.textContent = 'Passwords do not match'; h.className = 'hint bad'; }
-}
-
-/* ── show / hide password ── */
-function toggleEye(inputId, iconId) {
-  const inp  = $(inputId);
-  const icon = $(iconId);
-  const show = inp.type === 'password';
-  inp.type = show ? 'text' : 'password';
-  icon.querySelector('use').setAttribute('href', show ? '#i-eye-off' : '#i-eye');
-}
-
 /* ── signup submit ── */
 async function signup() {
   const username = $('username').value.trim().toLowerCase();
-  const password = $('password').value;
-  const confirm  = $('confirmPassword').value;
+  const email = $('email').value.trim().toLowerCase();
 
   if (!username) {
     $('nameHint').textContent = 'Please enter a username';
@@ -207,25 +128,25 @@ async function signup() {
     $('nameHint').className = 'hint bad';
     return;
   }
-  if (password.length < 8) {
-    $('passHint').textContent = 'Your backup password must be at least 8 characters';
-    $('passHint').className = 'hint bad';
-    $('password').focus();
+  if (!email) {
+    $('emailHint').textContent = 'Please enter an email address';
+    $('emailHint').className = 'hint bad';
+    $('email').focus();
     return;
   }
-  if (password !== confirm) {
-    $('passHint').textContent = 'The passwords you entered do not match';
-    $('passHint').className = 'hint bad';
-    $('confirmPassword').focus();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    $('emailHint').textContent = 'Please enter a valid email address';
+    $('emailHint').className = 'hint bad';
     return;
   }
 
-  $('passHint').textContent = '';
+  $('nameHint').textContent = '';
+  $('emailHint').textContent = '';
   $('btnNext').disabled = true;
 
   const r = await fetch('/api/signup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ username, email })
   }).catch(() => null);
 
   if (!r || !r.ok) {

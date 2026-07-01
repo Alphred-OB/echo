@@ -22,13 +22,13 @@ async function api(path, body, opts = {}) {
 (async () => {
   console.log('Echo protocol test against ' + BASE + '\n');
   const username = 'testuser_' + Date.now();
-  const password = 'testpassword123';
+  const email = username + '@example.com';
 
   // 1. signup + enroll
   const keys = await subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
   const publicKeyJwk = await subtle.exportKey('jwk', keys.publicKey);
 
-  const signup = await api('/api/signup', { username, password });
+  const signup = await api('/api/signup', { username, email });
   check('signup returns enroll token', signup.status === 200 && signup.json.enrollToken);
   const enrollToken = signup.json.enrollToken;
 
@@ -42,7 +42,7 @@ async function api(path, body, opts = {}) {
   const reuse = await api('/api/enroll', { enrollToken, deviceName: 'rogue2', publicKeyJwk });
   check('enroll token single-use', reuse.status === 401);
 
-  const taken = await api('/api/signup', { username, password });
+  const taken = await api('/api/signup', { username, email });
   check('taken username rejected', taken.status === 409);
 
   const status = await fetch(BASE + '/api/signup/status?token=' + enrollToken);
@@ -75,7 +75,7 @@ async function api(path, body, opts = {}) {
   // 6. wrong user's device
   const mallory = 'mallory_' + Date.now();
   const mkeys = await subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
-  const msignup = await api('/api/signup', { username: mallory, password: 'mallorypassword123' });
+  const msignup = await api('/api/signup', { username: mallory, email: mallory + '@example.com' });
   const menroll = await api('/api/enroll', {
     enrollToken: msignup.json.enrollToken, deviceName: 'mallory-phone',
     publicKeyJwk: await subtle.exportKey('jwk', mkeys.publicKey)
@@ -114,12 +114,18 @@ async function api(path, body, opts = {}) {
   const reclaim = await api('/api/session/claim', { sessionId: start4.json.sessionId, claimToken: msg.claimToken });
   check('claim token single-use', reclaim.status === 401);
 
-  // 10. fallback password login
-  const rec = await api('/api/login/recovery', { username, password });
-  check('fallback password login works', rec.status === 200 && rec.json.username === username);
+  // 10. fallback magic link login
+  const magicReq = await api('/api/login/magic-request', { usernameOrEmail: username });
+  check('magic request succeeds', magicReq.status === 200);
 
-  const recBad = await api('/api/login/recovery', { username, password: 'wrongpassword' });
-  check('wrong fallback password rejected', recBad.status === 401);
+  const { DatabaseSync } = require('node:sqlite');
+  const path = require('path');
+  const db = new DatabaseSync(path.join(__dirname, '../echo.db'));
+  const row = db.prepare('SELECT token FROM magic_tokens WHERE used = 0 ORDER BY created_at DESC LIMIT 1').get();
+  check('magic token generated in DB', row && row.token);
+
+  const magicLogin = await fetch(BASE + '/api/login/magic?token=' + row.token, { redirect: 'manual' });
+  check('magic login redirects to dashboard', magicLogin.status === 302);
 
   // device management
   const authCookie = cookie.split(';')[0];

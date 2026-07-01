@@ -337,7 +337,7 @@ app.post(<span style="color: #38bdf8;">'/api/login/verify'</span>, <span style="
           <strong>Challenge:</strong> Ambient noise (music, talking) or bad quality speakers/microphones block the sound wave.
         </p>
         <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
-          ✔ <strong>Solution:</strong> The signal uses audio error correction. If the silent ultrasound fails, the app lets you play an audible code, or sign in using a backup password.
+          ✔ <strong>Solution:</strong> The signal uses audio error correction. If the silent ultrasound fails, the app lets you play an audible code, or sign in using a magic link sent to your email.
         </p>
       </div>
 
@@ -361,7 +361,7 @@ app.post(<span style="color: #38bdf8;">'/api/login/verify'</span>, <span style="
           <strong>Challenge:</strong> You do not want to use your phone to sign in, or your phone battery is dead.
         </p>
         <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
-          ✔ <strong>Solution:</strong> You can choose to sign in using your backup account password, or use one of the single-use recovery codes generated from your dashboard.
+          ✔ <strong>Solution:</strong> You can request a one-time magic link sent to your registered email address. The link expires in 15 minutes and can only be used once.
         </p>
       </div>
 
@@ -373,7 +373,7 @@ app.post(<span style="color: #38bdf8;">'/api/login/verify'</span>, <span style="
           <strong>Challenge:</strong> Your older computer or phone doesn\'t support the secure microphone or cryptography APIs.
         </p>
         <p style="color: var(--ok); font-size: var(--fs-small); font-weight: 600; margin: 0; line-height: 1.6;">
-          ✔ <strong>Solution:</strong> The system detects feature support immediately. If standard APIs are missing, the login falls back automatically to traditional password verification.
+          ✔ <strong>Solution:</strong> The system detects feature support immediately. If standard APIs are missing, the login falls back automatically to email magic link sign-in — no passwords needed.
         </p>
       </div>
     </div>

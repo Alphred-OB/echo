@@ -92,10 +92,22 @@ CREATE TABLE IF NOT EXISTS logins (
   detail TEXT,
   created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS magic_tokens (
+  token TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  expires_at INTEGER NOT NULL,
+  used INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
 `);
 
 try {
   db.exec('ALTER TABLE users ADD COLUMN password_hash TEXT');
+} catch (e) {
+  // Column already exists
+}
+try {
+  db.exec('ALTER TABLE users ADD COLUMN email TEXT');
 } catch (e) {
   // Column already exists
 }

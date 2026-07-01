@@ -1,10 +1,9 @@
-// Echo — Express Application & API Server
-// Assembles middleware, route handlers, and the HTTP/WebSocket server.
-
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const {
   db, now, rand, getCookie, currentUser, hashCode,
@@ -12,6 +11,16 @@ const {
   verifyPassword, NONCE_TTL_MS, SESSION_TTL_MS, SIGN_PREFIX
 } = require('./db');
 const { attachWebSocket, notifyLaptop } = require('./websocket');
+
+const transporter = nodemailer.createTransport({
+  host: process.env.MAIL_HOST || 'mail.eruditeafricanetwork.com',
+  port: parseInt(process.env.MAIL_PORT || '465', 10),
+  secure: process.env.MAIL_PORT === '465' || process.env.MAIL_ENCRYPTION === 'ssl',
+  auth: {
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD
+  }
+});
 
 const PORT = process.env.PORT || 8000;
 const ENROLL_TTL_MS = 10 * 60_000;
@@ -93,12 +102,12 @@ app.get('/web/index.html', (_req, res) => res.redirect('/web/home.html'));
 // Intentionally public: entrypoint for initiating registration
 app.post('/api/signup', (req, res) => {
   const uname = String((req.body || {}).username || '').trim().toLowerCase();
-  const password = String((req.body || {}).password || '').trim();
+  const email = String((req.body || {}).email || '').trim().toLowerCase();
   if (!/^[a-z0-9_.-]{2,32}$/.test(uname)) {
     return res.status(400).json({ error: 'invalid username (2-32 chars: a-z 0-9 _ . -)' });
   }
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'password must be at least 8 characters long' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'invalid email address' });
   }
 
   const user = db.prepare('SELECT id FROM users WHERE username = ?').get(uname);
@@ -107,11 +116,15 @@ app.post('/api/signup', (req, res) => {
     if (hasDevice) return res.status(409).json({ error: 'username already taken' });
   }
 
-  const hashed = hashPassword(password);
+  const emailTaken = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (emailTaken && (!user || emailTaken.id !== user.id)) {
+    return res.status(409).json({ error: 'email already in use' });
+  }
+
   if (user) {
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashed, user.id);
+    db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, user.id);
   } else {
-    db.prepare('INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)').run(uname, hashed, now());
+    db.prepare('INSERT INTO users (username, email, created_at) VALUES (?, ?, ?)').run(uname, email, now());
   }
 
   const token = rand(16);
@@ -297,54 +310,102 @@ app.post('/api/session/claim', (req, res) => {
 
 // ---------------------------------------------------------------- Recovery
 
-// Generate (or regenerate) recovery codes — requires an active session
-app.post('/api/recovery/generate', (req, res) => {
-  const user = currentUser(req);
-  if (!user) return res.status(401).json({ error: 'not logged in' });
+// Request a passwordless magic login link to be sent via email
+app.post('/api/login/magic-request', async (req, res) => {
+  const input = String((req.body || {}).usernameOrEmail || '').trim().toLowerCase();
+  if (!input) {
+    return res.status(400).json({ error: 'Please enter your username or email address' });
+  }
 
-  db.prepare('DELETE FROM recovery_codes WHERE user_id = ?').run(user.id);
-  const codes = Array.from({ length: 6 }, makeCode);
-  const ins = db.prepare('INSERT INTO recovery_codes (user_id, code_hash, created_at) VALUES (?, ?, ?)');
-  for (const c of codes) ins.run(user.id, hashCode(user.username, c), now());
+  // Find user by username or email
+  const user = db.prepare('SELECT id, username, email FROM users WHERE username = ? OR email = ?').get(input, input);
+  if (!user || !user.email) {
+    // Return success message even if user not found to prevent user enumeration attacks
+    return res.json({ ok: true, message: 'If the account exists, a magic link has been sent to the registered email.' });
+  }
 
-  res.json({ ok: true, codes });
+  if (!recoveryAllowed(user.username)) {
+    return res.status(429).json({ error: 'too many attempts — wait 15 minutes' });
+  }
+
+  const magicToken = rand(32);
+  const expiration = now() + 15 * 60_000; // 15 minutes TTL
+
+  db.prepare('INSERT INTO magic_tokens (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
+    .run(magicToken, user.id, expiration, now());
+
+  // Determine host for construction of verification URL
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  const magicLink = `${protocol}://${host}/api/login/magic?token=${magicToken}`;
+
+  const mailOptions = {
+    from: `"${process.env.MAIL_FROM_NAME || 'Echo Auth'}" <${process.env.MAIL_FROM_ADDRESS}>`,
+    to: user.email,
+    subject: 'Your Echo Magic Sign-in Link 🪄',
+    text: `Hello ${user.username},\n\nClick the link below to sign in to your Echo account on this computer. This link is only valid for 15 minutes:\n\n${magicLink}\n\nIf you did not request this, you can ignore this email.\n\nBest,\nEcho Authentication Team`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; background: #ffffff;">
+        <h2 style="color: #2563eb; margin-top: 0;">Echo Sign-in</h2>
+        <p>Hello <strong>${user.username}</strong>,</p>
+        <p>You requested a backup login link because your phone is unavailable. Click the button below to sign in to your account instantly on this computer:</p>
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="${magicLink}" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; display: inline-block;">Sign in to Echo</a>
+        </div>
+        <p style="font-size: 13px; color: #64748b;">This link is valid for 15 minutes and can only be used once.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+        <p style="font-size: 11px; color: #94a3b8; text-align: center;">Echo Passwordless Auth Project</p>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    logLogin(user.id, 'recovery_request', null, true, 'magic link sent');
+    res.json({ ok: true, message: 'If the account exists, a magic link has been sent to the registered email.' });
+  } catch (err) {
+    console.error('SMTP sending error (falling back to console logging):', err.message);
+    console.log('\n======================================================');
+    console.log('[DEMO/FALLBACK] Magic link generated for ' + user.username + ':');
+    console.log(magicLink);
+    console.log('======================================================\n');
+    logLogin(user.id, 'recovery_request', null, true, 'magic link generated (SMTP fallback)');
+    res.json({ 
+      ok: true, 
+      message: 'Magic link generated! (Demo Fallback: check terminal console for link)',
+      debugLink: magicLink 
+    });
+  }
 });
 
-// Fallback login path when the phone is unavailable
-// Intentionally public: fallback recovery access using password
-app.post('/api/login/recovery', (req, res) => {
-  const uname = String((req.body || {}).username || '').trim().toLowerCase();
-  const password = String((req.body || {}).password || '');
-  const user = db.prepare('SELECT id, password_hash FROM users WHERE username = ?').get(uname);
-  if (!user || !user.password_hash) return res.status(401).json({ error: 'invalid username or password' });
-  if (!recoveryAllowed(uname)) return res.status(429).json({ error: 'too many attempts — wait 15 minutes' });
+// GET endpoint verifying the magic link token
+app.get('/api/login/magic', (req, res) => {
+  const token = String(req.query.token || '').trim();
+  if (!token) return res.status(400).send('<h1>Invalid or missing token</h1>');
 
-  const ok = verifyPassword(password, user.password_hash);
-
-  if (!ok) {
-    logLogin(user.id, 'recovery', null, false, 'bad password');
-    return res.status(401).json({ error: 'invalid username or password' });
+  const record = db.prepare('SELECT * FROM magic_tokens WHERE token = ? AND used = 0').get(token);
+  if (!record) {
+    return res.status(401).send('<h1>Link has expired or already been used. Please request a new one.</h1>');
   }
 
-  // Migrate legacy static-salt hashes to the new salt/iteration format
-  if (!user.password_hash.includes(':')) {
-    try {
-      const newHash = hashPassword(password);
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
-    } catch (err) {
-      console.error('Failed to auto-upgrade legacy password hash:', err);
-    }
+  if (record.expires_at < now()) {
+    return res.status(401).send('<h1>This magic link has expired. Please request a new one.</h1>');
   }
 
-  logLogin(user.id, 'recovery', null, true, null);
+  // Mark token as used
+  db.prepare('UPDATE magic_tokens SET used = 1 WHERE token = ?').run(token);
 
-  const token = rand(32);
+  logLogin(record.user_id, 'recovery', null, true, 'magic link verified');
+
+  const sessionToken = rand(32);
   db.prepare('INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
-    .run(token, user.id, now() + SESSION_TTL_MS, now());
-  const cookieFlags = `HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${IS_PROD ? '; Secure' : ''}`;
-  res.setHeader('Set-Cookie', `echo_session=${token}; ${cookieFlags}`);
+    .run(sessionToken, record.user_id, now() + SESSION_TTL_MS, now());
 
-  res.json({ ok: true, username: uname });
+  const cookieFlags = `HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${IS_PROD ? '; Secure' : ''}`;
+  res.setHeader('Set-Cookie', `echo_session=${sessionToken}; ${cookieFlags}`);
+
+  // Redirect to dashboard
+  res.redirect('/web/dashboard.html');
 });
 
 // ---------------------------------------------------------------- Device Management
@@ -376,39 +437,13 @@ app.get('/api/me', (req, res) => {
   const user = currentUser(req);
   if (!user) return res.status(401).json({ error: 'not logged in' });
   const devices = db.prepare('SELECT id, name, created_at FROM devices WHERE user_id = ?').all(user.id);
-  const recoveryUnused = db.prepare('SELECT COUNT(*) c FROM recovery_codes WHERE user_id = ? AND used = 0').get(user.id).c;
   const recentLogins = db.prepare(
     `SELECT l.method, l.ok, l.detail, l.created_at, d.name AS device_name
      FROM logins l LEFT JOIN devices d ON d.id = l.device_id
      WHERE l.user_id = ? ORDER BY l.id DESC LIMIT 12`
   ).all(user.id);
-  const fullUser = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id);
-  const hasPassword = !!(fullUser && fullUser.password_hash);
-  res.json({ username: user.username, devices, recoveryUnused, recentLogins, hasPassword });
-});
-
-// Change the backup password from the dashboard
-app.post('/api/password/change', (req, res) => {
-  const user = currentUser(req);
-  if (!user) return res.status(401).json({ error: 'not logged in' });
-  const { currentPassword, newPassword } = req.body || {};
-  if (!newPassword || String(newPassword).length < 8) {
-    return res.status(400).json({ error: 'New password must be at least 8 characters.' });
-  }
-  const fullUser = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id);
-  // If user already has a password, verify the current one first
-  if (fullUser && fullUser.password_hash) {
-    if (!currentPassword) {
-      return res.status(400).json({ error: 'Current password is required.' });
-    }
-    const ok = verifyPassword(String(currentPassword), fullUser.password_hash);
-    if (!ok) {
-      return res.status(401).json({ error: 'Current password is incorrect.' });
-    }
-  }
-  const newHash = hashPassword(String(newPassword));
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
-  res.json({ ok: true });
+  const fullUser = db.prepare('SELECT email FROM users WHERE id = ?').get(user.id);
+  res.json({ username: user.username, devices, email: (fullUser ? fullUser.email : null), recentLogins });
 });
 
 // Invalidate the current session cookie
