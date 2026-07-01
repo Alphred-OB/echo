@@ -473,4 +473,22 @@ server.listen(PORT, () => {
   console.log('  web app:         /web/home.html');
   console.log('  login page:      /web/login.html');
   console.log('  phone app:       /phone/phone.html');
+
+  // ── Keep-alive self-ping (Render free tier only) ──────────────────────────
+  // Render sets RENDER_EXTERNAL_URL automatically. We ping /healthz every
+  // 10 minutes so the service never hits the 15-minute inactivity sleep.
+  // Uses Node's built-in http/https — no extra dependencies.
+  const renderUrl = process.env.RENDER_EXTERNAL_URL;
+  if (renderUrl) {
+    const pingUrl = renderUrl.replace(/\/$/, '') + '/healthz';
+    const mod = pingUrl.startsWith('https') ? require('https') : require('http');
+    console.log(`Keep-alive: pinging ${pingUrl} every 10 minutes`);
+    setInterval(() => {
+      mod.get(pingUrl, (res) => {
+        res.resume(); // drain response so socket closes cleanly
+      }).on('error', (err) => {
+        console.warn('Keep-alive ping failed:', err.message);
+      });
+    }, 10 * 60 * 1000).unref(); // .unref() won't block graceful shutdown
+  }
 });
