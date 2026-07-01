@@ -475,13 +475,13 @@ server.listen(PORT, () => {
   console.log('  phone app:       /phone/phone.html');
 
   // ── Keep-alive self-ping (Render free tier only) ──────────────────────────
-  // Render sets RENDER_EXTERNAL_URL automatically. We ping /healthz every
-  // 10 minutes so the service never hits the 15-minute inactivity sleep.
+  // Pings /healthz every 10 minutes to prevent the free-tier 15-min sleep.
+  // Falls back to the known production URL if RENDER_EXTERNAL_URL isn't set.
   // Uses Node's built-in http/https — no extra dependencies.
-  const renderUrl = process.env.RENDER_EXTERNAL_URL;
-  if (renderUrl) {
+  const renderUrl = process.env.RENDER_EXTERNAL_URL || 'https://echo-n51n.onrender.com';
+  if (process.env.NODE_ENV === 'production' || process.env.RENDER_EXTERNAL_URL) {
     const pingUrl = renderUrl.replace(/\/$/, '') + '/healthz';
-    const mod = pingUrl.startsWith('https') ? require('https') : require('http');
+    const mod = require('https');
     console.log(`Keep-alive: pinging ${pingUrl} every 10 minutes`);
     setInterval(() => {
       mod.get(pingUrl, (res) => {
