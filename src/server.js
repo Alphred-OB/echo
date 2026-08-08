@@ -110,10 +110,19 @@ app.post('/api/signup', (req, res) => {
     return res.status(400).json({ error: 'invalid email address' });
   }
 
-  const user = db.prepare('SELECT id FROM users WHERE username = ?').get(uname);
+  const user = db.prepare('SELECT id, email FROM users WHERE username = ?').get(uname);
   if (user) {
     const hasDevice = db.prepare('SELECT id FROM devices WHERE user_id = ? LIMIT 1').get(user.id);
     if (hasDevice) return res.status(409).json({ error: 'username already taken' });
+
+    // A claim without an enrolled device is still "in progress" while its enroll
+    // token is live. Don't let a different caller silently hijack it (and rewrite
+    // the recovery email, then attach their own device) mid-flight — only the
+    // original email may continue/retry the claim until that token expires.
+    const activeToken = db.prepare('SELECT token FROM enroll_tokens WHERE username = ? AND used = 0 AND expires_at > ?').get(uname, now());
+    if (activeToken && user.email !== email) {
+      return res.status(409).json({ error: 'username already taken' });
+    }
   }
 
   const emailTaken = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
@@ -126,6 +135,10 @@ app.post('/api/signup', (req, res) => {
   } else {
     db.prepare('INSERT INTO users (username, email, created_at) VALUES (?, ?, ?)').run(uname, email, now());
   }
+
+  // At most one enroll token should ever be valid per username — burn any prior
+  // unused one before minting a fresh one.
+  db.prepare('DELETE FROM enroll_tokens WHERE username = ? AND used = 0').run(uname);
 
   const token = rand(16);
   db.prepare('INSERT INTO enroll_tokens (token, username, expires_at, created_at) VALUES (?, ?, ?, ?)')
@@ -364,17 +377,26 @@ app.post('/api/login/magic-request', async (req, res) => {
     logLogin(user.id, 'recovery_request', null, true, 'magic link sent');
     res.json({ ok: true, message: 'If the account exists, a magic link has been sent to the registered email.' });
   } catch (err) {
-    console.error('SMTP sending error (falling back to console logging):', err.message);
-    console.log('\n======================================================');
-    console.log('[DEMO/FALLBACK] Magic link generated for ' + user.username + ':');
-    console.log(magicLink);
-    console.log('======================================================\n');
-    logLogin(user.id, 'recovery_request', null, true, 'magic link generated (SMTP fallback)');
-    res.json({ 
-      ok: true, 
-      message: 'Magic link generated! (Demo Fallback: check terminal console for link)',
-      debugLink: magicLink 
-    });
+    console.error('SMTP sending error:', err.message);
+    logLogin(user.id, 'recovery_request', null, false, 'magic link email failed: ' + err.message);
+
+    // Never leak a live, unused login token in the API response — an attacker
+    // could trigger this branch on demand (e.g. during a mail outage) against
+    // any known username/email and get a working sign-in link with no access
+    // to the victim's inbox. The token is only echoed back outside production,
+    // where there is no real mailbox to check.
+    if (!IS_PROD) {
+      console.log('\n======================================================');
+      console.log('[DEV FALLBACK] Magic link generated for ' + user.username + ':');
+      console.log(magicLink);
+      console.log('======================================================\n');
+      return res.json({
+        ok: true,
+        message: 'Magic link generated! (Dev fallback: check terminal console for link)',
+        debugLink: magicLink
+      });
+    }
+    res.status(502).json({ error: 'Could not send the email right now. Please try again in a few minutes.' });
   }
 });
 

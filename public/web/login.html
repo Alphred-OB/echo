@@ -17,14 +17,14 @@
 <body>
 <script src="../icons.js"></script>
 <div class="wrap" style="padding-top: 60px; padding-bottom: 60px;">
-  <div style="margin-top: 20px;">
+  <div style="max-width: 460px; margin: 20px auto 0;">
 
     <!-- ── Main sign-in card (sound-based) ── -->
     <div class="card" id="soundCard">
-      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 28px; justify-content: center; display: flex;">
         <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <span class="word">echo</span>
-      </div>
+      </a>
 
       <h2>
         <svg class="ic" style="margin-right:6px"><use href="#i-volume"/></svg>
@@ -36,12 +36,13 @@
         <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
         Username
       </label>
-      <input type="text" id="username" autocomplete="username" placeholder="your username" spellcheck="false"
+      <input type="text" id="username" autocomplete="username" placeholder="your username" spellcheck="false" autofocus
              onkeydown="if(event.key==='Enter')startLogin()">
 
       <details style="margin-top:14px">
         <summary style="font-size:var(--fs-small); font-weight:600; color:var(--dim); cursor:pointer;">
-          ⚙️ Sound quality options
+          <svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="15" y2="12"/><line x1="4" y1="17" x2="18" y2="17"/></svg>
+          Sound quality options
         </summary>
         <select id="proto" style="margin-top:8px">
           <option value="ULTRASOUND_NORMAL" selected>Silent (ultrasound) — best option, works automatically</option>
@@ -76,10 +77,10 @@
 
     <!-- ── Magic Link Recovery Card ── -->
     <div class="card" id="recoveryCard" style="display:none">
-      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 28px; justify-content: center; display: flex;">
         <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <span class="word">echo</span>
-      </div>
+      </a>
 
       <h2>
         <svg class="ic" style="margin-right:6px"><use href="#i-mail"/></svg>
@@ -119,11 +120,22 @@
 </div>
 
 <script>
+const $ = id => document.getElementById(id);
 let ggwave = null, context = null, instance = null;
 let session = null, ws = null, txCount = 0, txTimer = null, startedAt = 0;
 const MAX_AUTO_TX = 3;
 
-const $ = id => document.getElementById(id);
+function toggleNav(force) {
+  const links = $('navLinks');
+  const btn = $('navToggle');
+  const next = typeof force === 'boolean' ? force : !links.classList.contains('nav-open');
+  links.classList.toggle('nav-open', next);
+  btn.setAttribute('aria-expanded', String(next));
+}
+document.addEventListener('click', (e) => {
+  if (!$('mainNav').contains(e.target)) toggleNav(false);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleNav(false); });
 
 if (typeof ggwave_factory !== 'undefined') {
   ggwave_factory().then(g => { ggwave = g; });

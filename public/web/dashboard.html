@@ -244,15 +244,18 @@
 <body>
 <script src="../icons.js"></script>
 <div class="wrap wide">
-  <nav class="nav">
+  <nav class="nav" id="mainNav">
     <a class="brand" href="home.html">
       <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
       <span class="word">echo</span>
     </a>
-    <span class="links">
+    <button id="navToggle" class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="navLinks">
+      <svg class="ic" style="width: 20px; height: 20px; margin: 0;" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+    <span class="links" id="navLinks">
       <a class="link" href="home.html#how">How it works</a>
       <a class="link" href="technology.html">Technology</a>
-      <a class="link" href="integration.html">Developer</a>
+      <a class="link" href="home.html#security">Security</a>
       <span class="pill" style="margin:0"><svg class="ic"><use href="#i-user"/></svg> <b id="navUser"></b></span>
       <a class="link" href="#" onclick="logout(); return false"><svg class="ic"><use href="#i-logout"/></svg> Sign out</a>
     </span>
@@ -424,8 +427,13 @@ function renderDevices() {
         <div class="device-name">${esc(d.name)}</div>
         <div class="device-meta">Enrolled ${new Date(d.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</div>
       </div>
-      <button class="btn small outline-red" onclick="revoke('${d.id}', '${esc(d.name)}')">Revoke</button>
+      <button class="btn small outline-red" data-device-id="${esc(d.id)}" data-device-name="${esc(d.name)}">Revoke</button>
     </div>`).join('');
+  // Bound via addEventListener (not an inline onclick string) so a device name
+  // can never break out of a JS string literal and execute as script.
+  el.querySelectorAll('button[data-device-id]').forEach(btn => {
+    btn.addEventListener('click', () => revoke(btn.dataset.deviceId, btn.dataset.deviceName));
+  });
 }
 
 function renderActivity() {
@@ -481,9 +489,56 @@ async function addDevice() {
       clearInterval(pollTimer);
       $('addDeviceBox').style.display = 'none';
       load();
-    }
   }, 2000);
 }
+</script>
+</div>
+
+<footer class="premium-footer">
+  <div class="footer-inner">
+    <div class="footer-cols">
+      <div class="footer-brand-col">
+        <a class="brand" href="home.html" style="margin-bottom: 4px;">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word">echo</span>
+        </a>
+        <p class="footer-brand-desc">Fast, secure, and password-free sign in powered by your phone and silent sound signals.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Navigation</h4>
+        <ul>
+          <li><a href="home.html#how">How it works</a></li>
+          <li><a href="technology.html">Technology</a></li>
+          <li><a href="home.html#security">Security & FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Account</h4>
+        <ul>
+          <li><a href="login.html">Sign in</a></li>
+          <li><a href="signup.html">Get started</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 Echo. All rights reserved.</span>
+      <span class="footer-copy">Secure Passwordless Sign-In Protocol</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+function toggleNav(force) {
+  const links = $('navLinks');
+  const btn = $('navToggle');
+  const next = typeof force === 'boolean' ? force : !links.classList.contains('nav-open');
+  links.classList.toggle('nav-open', next);
+  btn.setAttribute('aria-expanded', String(next));
+}
+document.addEventListener('click', (e) => {
+  if (!$('mainNav').contains(e.target)) toggleNav(false);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleNav(false); });
 
 // ---- Backup password management removed in favor of Magic Links ----
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));

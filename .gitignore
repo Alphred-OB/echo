@@ -16,8 +16,15 @@ echo.db-wal
 
 # macOS
 .DS_Store
+._*
 .AppleDouble
 .LSOverride
+
+# Local caches / scratch
+.dsc_cache/
+
+# Personal / non-repo documents
+/Proposal-(Dont Push to Github)/
 
 # Logs
 *.log

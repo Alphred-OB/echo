@@ -17,15 +17,15 @@
 <body>
 <script src="../icons.js"></script>
 <div class="wrap" style="padding-top: 60px; padding-bottom: 60px;">
-  <div style="margin-top: 20px;">
+  <div style="max-width: 460px; margin: 20px auto 0;">
     <div class="dots"><i id="d1" class="on"></i><i id="d2"></i><i id="d3"></i></div>
 
     <!-- ── Step 1: username + password ── -->
     <div class="card" id="step1">
-      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 28px; justify-content: center; display: flex;">
         <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <span class="word">echo</span>
-      </div>
+      </a>
 
       <h2>
         <svg class="ic" style="margin-right:6px"><use href="#i-user"/></svg>
@@ -37,7 +37,7 @@
         <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
         Username
       </label>
-      <input type="text" id="username" placeholder="e.g. kwame.a" autocomplete="off" spellcheck="false"
+      <input type="text" id="username" placeholder="e.g. kwame.a" autocomplete="off" spellcheck="false" autofocus
              oninput="checkName(this.value)" onkeydown="if(event.key==='Enter')document.getElementById('email').focus()">
       <div class="hint" id="nameHint"></div>
 
@@ -58,10 +58,11 @@
 
     <!-- ── Step 2: scan QR ── -->
     <div class="card" id="step2" style="display:none">
-      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 28px; justify-content: center; display: flex;">
         <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <span class="word">echo</span>
-      </div>
+      </a>
+      <a class="text" href="#" onclick="backToStep1(); return false;" style="font-size: var(--fs-tiny); display: inline-block; margin-bottom: 12px;">&larr; Back</a>
       <h2>
         <svg class="ic"><use href="#i-phone"/></svg>
         Add your phone
@@ -82,10 +83,10 @@
 
     <!-- ── Step 3: all done ── -->
     <div class="card center" id="step3" style="display:none">
-      <div class="brand center" style="margin-bottom: 28px; justify-content: center; display: flex;">
+      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 28px; justify-content: center; display: flex;">
         <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <span class="word">echo</span>
-      </div>
+      </a>
       <div class="bigico" style="margin-top: 14px;"><svg class="ic lg"><use href="#i-check"/></svg></div>
       <h2 style="justify-content:center">You're all set, <span id="doneName"></span>!</h2>
       <p class="sub">Your phone is now your key. Sign in anytime — just have Echo open on your phone and we'll do the rest.</p>
@@ -101,6 +102,19 @@
 
 <script>
 const $ = id => document.getElementById(id);
+
+function toggleNav(force) {
+  const links = $('navLinks');
+  const btn = $('navToggle');
+  const next = typeof force === 'boolean' ? force : !links.classList.contains('nav-open');
+  links.classList.toggle('nav-open', next);
+  btn.setAttribute('aria-expanded', String(next));
+}
+document.addEventListener('click', (e) => {
+  if (!$('mainNav').contains(e.target)) toggleNav(false);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleNav(false); });
+
 let enrollUrl = null, pollTimer = null;
 
 /* ── username validation ── */
@@ -171,6 +185,14 @@ async function signup() {
   $('step2').style.display = '';
   $('d2').className = 'on';
   poll(data.enrollToken);
+}
+
+function backToStep1() {
+  clearInterval(pollTimer);
+  $('step2').style.display = 'none';
+  $('step1').style.display = '';
+  $('d2').className = '';
+  $('btnNext').disabled = false;
 }
 
 function poll(token) {
