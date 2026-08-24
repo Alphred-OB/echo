@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:ggwave_flutter/ggwave_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AudioListenerService {
   GGWaveFlutter? _ggwave;
@@ -62,6 +63,13 @@ class AudioListenerService {
   /// Start listening for ultrasonic nonces
   Future<void> startListening() async {
     if (_isListening) return;
+
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      debugPrint('[EchoAudio] Microphone permission not granted ($status)');
+      return;
+    }
+
     _isListening = true;
 
     try {
