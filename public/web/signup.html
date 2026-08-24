@@ -13,256 +13,317 @@
   document.documentElement.setAttribute('data-theme', savedTheme || 'light');
 })();
 </script>
+<style>
+.auth-box {
+  max-width: 420px;
+  margin: 40px auto 0;
+}
+
+.brand-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.brand-header .wave {
+  margin-bottom: 12px;
+}
+
+.auth-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 0 0 6px;
+  color: var(--fg);
+  text-align: center;
+}
+
+.auth-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 20px;
+  text-align: center;
+}
+
+/* Minimalist QR Frame */
+.qr-container {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+.qr-card {
+  padding: 16px;
+  background: #ffffff;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.06);
+  display: inline-block;
+  line-height: 0;
+}
+
+.qr-card img {
+  border-radius: 8px;
+}
+
+/* Minimal Status Line */
+.live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 4px auto 16px;
+}
+
+.beacon-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6);
+  animation: pulse-beacon 1.8s infinite;
+}
+
+@keyframes pulse-beacon {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
+.subtle-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.auth-footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+</style>
 </head>
 <body>
 <script src="../icons.js"></script>
-<div class="wrap" style="padding-top: 60px; padding-bottom: 60px;">
-  <div style="max-width: 460px; margin: 20px auto 0;">
-    <div class="dots"><i id="d1" class="on"></i><i id="d2"></i><i id="d3"></i></div>
+<div class="wrap" style="padding-top: 40px; padding-bottom: 60px;">
+  <div class="auth-box">
 
-    <!-- ── Step 1: username + email ── -->
-    <div class="card card-animate" id="step1">
-      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 24px; justify-content: center; display: flex;">
-        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="word">echo</span>
-      </a>
-
-      <div class="step-header">
-        <span class="step-badge">Step 1 of 2</span>
+    <!-- ── Step 1: Account Info ── -->
+    <div class="card" id="step1">
+      <div class="brand-header">
+        <a class="brand" href="home.html" aria-label="Echo home">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word" style="font-size: 22px;">echo</span>
+        </a>
       </div>
 
-      <h2>
-        <svg class="ic" style="margin-right:6px"><use href="#i-user"/></svg>
-        Create your account
-      </h2>
-      <p class="sub">Choose your username and email. Your phone acts as your cryptographic security key to sign you in.</p>
+      <h2 class="auth-title">Create Account</h2>
+      <p class="auth-sub">Set up your passwordless acoustic profile</p>
 
-      <label for="username">
-        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
-        Username
-      </label>
-      <input type="text" id="username" placeholder="e.g. kwame.a" autocomplete="off" spellcheck="false" autofocus
-             oninput="checkName(this.value)" onkeydown="if(event.key==='Enter')document.getElementById('email').focus()">
-      <div class="hint" id="nameHint"></div>
+      <label for="username" style="font-size: 13px; font-weight: 700;">Username</label>
+      <input type="text" id="username" placeholder="e.g. kwame" autocomplete="off" spellcheck="false" autofocus
+             onkeydown="if(event.key==='Enter')document.getElementById('email').focus()" style="margin-bottom: 14px;">
+      <div class="hint" id="userHint" style="margin-top: -8px; margin-bottom: 12px;"></div>
 
-      <!-- Email section -->
-      <label for="email">
-        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-mail"/></svg>
-        Email Address
-      </label>
+      <label for="email" style="font-size: 13px; font-weight: 700;">Email Address</label>
       <input type="email" id="email" placeholder="e.g. kwame@example.com" autocomplete="off" spellcheck="false"
-             onkeydown="if(event.key==='Enter')signup()">
-      <div class="hint" id="emailHint"></div>
+             onkeydown="if(event.key==='Enter')signup()" style="margin-bottom: 18px;">
+      <div class="hint" id="emailHint" style="margin-top: -12px; margin-bottom: 12px;"></div>
+
+      <div class="status" id="formStatus" style="margin-bottom: 14px; display: none;"></div>
 
       <button class="btn" id="btnNext" onclick="signup()">
         Continue
-        <svg class="ic"><use href="#i-arrow-right"/></svg>
       </button>
     </div>
 
-    <!-- ── Step 2: scan QR ── -->
-    <div class="card card-animate" id="step2" style="display:none">
-      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 20px; justify-content: center; display: flex;">
-        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="word">echo</span>
-      </a>
-
-      <div class="step-header">
-        <button type="button" class="back-btn" onclick="backToStep1()">
-          <svg class="ic sm"><use href="#i-arrow-left"/></svg>
-          Back
-        </button>
-        <span class="step-badge">Step 2 of 2</span>
+    <!-- ── Step 2: Clean QR Code Pairing ── -->
+    <div class="card" id="step2" style="display:none">
+      <div class="brand-header">
+        <a class="brand" href="home.html" aria-label="Echo home">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word" style="font-size: 22px;">echo</span>
+        </a>
       </div>
 
-      <h2>
-        <svg class="ic" style="margin-right:6px"><use href="#i-phone"/></svg>
-        Pair your security key
-      </h2>
-      <p class="sub" style="margin-bottom: 12px;">Open your phone camera or the Echo Key app to scan the code below. Valid for 10 minutes.</p>
+      <h2 class="auth-title">Pair Security Key</h2>
+      <p class="auth-sub">Scan the code below with your Echo Key app</p>
 
-      <div class="qr" id="qrBox"></div>
-
-      <div class="pairing-link-row">
-        <span class="pairing-link-text" id="enrollLink"></span>
-        <button type="button" class="copy-btn" id="btnCopy" onclick="copyEnrollLink()">
-          <svg class="ic sm"><use href="#i-copy"/></svg>
-          <span id="copyLabel">Copy</span>
-        </button>
+      <!-- QR Code -->
+      <div class="qr-container">
+        <div class="qr-card" id="qrBox"></div>
       </div>
 
-      <div class="center" style="display:flex; justify-content:center;">
-        <div class="beacon-status" id="waitStatus">
+      <!-- Clean Live Status Indicator -->
+      <div style="text-align: center;">
+        <div class="live-status" id="waitStatus">
           <span class="beacon-dot"></span>
-          <span>Waiting for your phone to confirm…</span>
+          <span>Waiting for phone…</span>
         </div>
       </div>
 
-      <div class="divider">Or pair on this computer</div>
-      <button class="btn ghost" onclick="window.open(enrollUrl,'_blank')">
-        <svg class="ic"><use href="#i-monitor"/></svg>
-        Open pairing tab on this computer
-      </button>
+      <!-- Subtle Action Links -->
+      <div class="subtle-actions">
+        <button type="button" class="btn-link" id="btnCopy" onclick="copyEnrollLink()" style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;">
+          <span id="copyLabel">Copy pairing link</span>
+        </button>
+        <span style="color:var(--border);">·</span>
+        <button type="button" class="btn-link" onclick="window.open(enrollUrl,'_blank')" style="background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;">
+          Open on this computer
+        </button>
+      </div>
+
+      <div style="text-align: center; margin-top: 18px;">
+        <button type="button" class="btn ghost" onclick="backToStep1()" style="font-size: 13px; padding: 6px 14px;">
+          Back
+        </button>
+      </div>
     </div>
 
-    <!-- ── Step 3: all done ── -->
-    <div class="card center card-animate" id="step3" style="display:none">
-      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 28px; justify-content: center; display: flex;">
-        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="word">echo</span>
-      </a>
-      <div class="bigico" style="margin-top: 14px;"><svg class="ic lg"><use href="#i-check"/></svg></div>
-      <h2 style="justify-content:center">You're all set, <span id="doneName"></span>!</h2>
-      <p class="sub">Your phone is now your key. Sign in anytime — just have Echo open on your phone and we'll do the rest.</p>
+    <!-- ── Step 3: Success ── -->
+    <div class="card" id="step3" style="display:none; text-align: center;">
+      <div class="brand-header">
+        <a class="brand" href="home.html" aria-label="Echo home">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word" style="font-size: 22px;">echo</span>
+        </a>
+      </div>
+
+      <div style="width: 56px; height: 56px; background: var(--ok-soft); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: var(--ok);">
+        <svg class="ic" style="width: 32px; height: 32px;"><use href="#i-check"/></svg>
+      </div>
+
+      <h2 class="auth-title">You're all set, <span id="doneName"></span>!</h2>
+      <p class="auth-sub" style="margin-bottom: 24px;">Your phone is now registered as your physical security key.</p>
+
       <button class="btn" onclick="location.href='login.html'">
         <svg class="ic"><use href="#i-volume"/></svg>
         Sign in with Echo
       </button>
     </div>
 
-    <div class="status" style="margin-top: 24px;">Already have an account? <a class="text" href="login.html">Sign in</a></div>
+    <!-- Bottom Account Link -->
+    <div class="auth-footer-links">
+      <span style="color: var(--muted);">Already have an account?</span>
+      <a class="text" href="login.html" style="color: var(--accent); font-weight: 700;">Sign in</a>
+    </div>
+
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
+let enrollUrl = '', enrollToken = '', eventSource = null;
 
-function toggleNav(force) {
-  const links = $('navLinks');
-  const btn = $('navToggle');
-  const next = typeof force === 'boolean' ? force : !links.classList.contains('nav-open');
-  links.classList.toggle('nav-open', next);
-  btn.setAttribute('aria-expanded', String(next));
-}
-document.addEventListener('click', (e) => {
-  if (!$('mainNav').contains(e.target)) toggleNav(false);
-});
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleNav(false); });
-
-let enrollUrl = null, pollTimer = null;
-
-/* ── username validation ── */
-function checkName(v) {
-  const ok = /^[a-z0-9_.-]{2,32}$/.test(v.trim().toLowerCase());
-  const h = $('nameHint');
-  if (!v.trim()) { h.textContent = ''; h.className = 'hint'; return; }
-  h.textContent = ok ? '✓ Looks good' : 'Use 2–32 characters: letters, numbers, underscore, dot, or dash';
-  h.className = ok ? 'hint ok' : 'hint bad';
-}
-
-/* ── signup submit ── */
 async function signup() {
-  const username = $('username').value.trim().toLowerCase();
-  const email = $('email').value.trim().toLowerCase();
+  const username = $('username').value.trim();
+  const email = $('email').value.trim();
+  const formStatus = $('formStatus');
+  formStatus.style.display = 'none';
 
   if (!username) {
-    $('nameHint').textContent = 'Please enter a username';
-    $('nameHint').className = 'hint bad';
-    $('username').focus();
+    formStatus.className = 'status bad';
+    formStatus.textContent = 'Please choose a username';
+    formStatus.style.display = 'block';
     return;
   }
-  if (!/^[a-z0-9_.-]{2,32}$/.test(username)) {
-    $('nameHint').textContent = 'Username has invalid characters';
-    $('nameHint').className = 'hint bad';
-    return;
-  }
-  if (!email) {
-    $('emailHint').textContent = 'Please enter an email address';
-    $('emailHint').className = 'hint bad';
-    $('email').focus();
-    return;
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    $('emailHint').textContent = 'Please enter a valid email address';
-    $('emailHint').className = 'hint bad';
+  if (!email || !email.includes('@')) {
+    formStatus.className = 'status bad';
+    formStatus.textContent = 'Please enter a valid email address';
+    formStatus.style.display = 'block';
     return;
   }
 
-  $('nameHint').textContent = '';
-  $('emailHint').textContent = '';
   $('btnNext').disabled = true;
 
-  const r = await fetch('/api/signup', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email })
-  }).catch(() => null);
+  try {
+    const r = await fetch('/api/signup/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email })
+    });
+    const data = await r.json().catch(() => ({}));
 
-  if (!r || !r.ok) {
-    const err = r ? (await r.json().catch(() => ({}))).error : 'Cannot reach the server — is it running?';
-    $('nameHint').textContent = err || 'Sign-up failed — please try again';
-    $('nameHint').className = 'hint bad';
+    if (!r.ok) {
+      $('btnNext').disabled = false;
+      formStatus.className = 'status bad';
+      formStatus.textContent = data.error || 'Could not start sign-up';
+      formStatus.style.display = 'block';
+      return;
+    }
+
+    enrollToken = data.enrollToken;
+    enrollUrl = `${location.protocol}//${location.host}/phone/phone.html?token=${enrollToken}`;
+
+    // Render QR Code
+    $('qrBox').innerHTML = '';
+    new QRCode($('qrBox'), {
+      text: enrollUrl,
+      width: 190,
+      height: 190,
+      colorDark: '#0f172a',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    $('step1').style.display = 'none';
+    $('step2').style.display = 'block';
+
+    listenForEnrollment();
+  } catch {
     $('btnNext').disabled = false;
-    return;
+    formStatus.className = 'status bad';
+    formStatus.textContent = 'Network error — check connection';
+    formStatus.style.display = 'block';
   }
-
-  const data = await r.json();
-  enrollUrl = location.origin + '/phone/phone.html?token=' + data.enrollToken;
-  $('doneName').textContent = data.username;
-
-  const qr = qrcode(0, 'M');
-  qr.addData(enrollUrl);
-  qr.make();
-  $('qrBox').innerHTML = qr.createSvgTag({ scalable: true, margin: 2 });
-  $('enrollLink').textContent = enrollUrl.replace(/^https?:\/\//, '');
-
-  $('step1').style.display = 'none';
-  $('step2').style.display = '';
-  $('d2').className = 'on';
-  poll(data.enrollToken);
 }
 
-function backToStep1() {
-  clearInterval(pollTimer);
-  $('step2').style.display = 'none';
-  $('step1').style.display = '';
-  $('d2').className = '';
-  $('btnNext').disabled = false;
+function listenForEnrollment() {
+  if (eventSource) eventSource.close();
+  eventSource = new EventSource(`/api/enroll/events?token=${enrollToken}`);
+
+  eventSource.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'enrolled') {
+        eventSource.close();
+        $('doneName').textContent = $('username').value.trim();
+        $('step2').style.display = 'none';
+        $('step3').style.display = 'block';
+      }
+    } catch {}
+  };
+
+  eventSource.onerror = () => {};
 }
 
 function copyEnrollLink() {
-  if (!enrollUrl) return;
   navigator.clipboard.writeText(enrollUrl).then(() => {
-    const btn = $('btnCopy');
-    const label = $('copyLabel');
-    btn.classList.add('copied');
-    label.textContent = 'Copied!';
+    $('copyLabel').textContent = 'Link copied!';
     setTimeout(() => {
-      btn.classList.remove('copied');
-      label.textContent = 'Copy';
+      $('copyLabel').textContent = 'Copy pairing link';
     }, 2000);
-  }).catch(() => {
-    // Fallback if clipboard API is restricted
-    const inp = document.createElement('input');
-    inp.value = enrollUrl;
-    document.body.appendChild(inp);
-    inp.select();
-    document.execCommand('copy');
-    document.body.removeChild(inp);
-    const label = $('copyLabel');
-    label.textContent = 'Copied!';
-    setTimeout(() => { label.textContent = 'Copy'; }, 2000);
   });
 }
 
-function poll(token) {
-  pollTimer = setInterval(async () => {
-    const r = await fetch('/api/signup/status?token=' + token).catch(() => null);
-    if (!r || !r.ok) return;
-    const s = await r.json();
-    if (s.enrolled) {
-      clearInterval(pollTimer);
-      $('step2').style.display = 'none';
-      $('step3').style.display = '';
-      $('d3').className = 'on';
-    } else if (s.expired) {
-      clearInterval(pollTimer);
-      $('waitStatus').className = 'beacon-status';
-      $('waitStatus').style.background = 'var(--bad-soft)';
-      $('waitStatus').style.color = 'var(--bad)';
-      $('waitStatus').style.borderColor = 'rgba(220, 38, 38, 0.2)';
-      $('waitStatus').innerHTML = '<span>The pairing link has expired. Go back to restart.</span>';
-    }
-  }, 2000);
+function backToStep1() {
+  if (eventSource) eventSource.close();
+  $('step2').style.display = 'none';
+  $('step1').style.display = 'block';
+  $('btnNext').disabled = false;
 }
 </script>
 </body>
