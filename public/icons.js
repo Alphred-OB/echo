@@ -19,6 +19,7 @@ document.currentScript.insertAdjacentHTML('afterend', `
 <symbol id="i-activity" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
 <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
 <symbol id="i-arrow-right" viewBox="0 0 24 24"><line x1="4" y1="12" x2="20" y2="12"/><polyline points="13 5 20 12 13 19"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24"><line x1="20" y1="12" x2="4" y2="12"/><polyline points="11 19 4 12 11 5"/></symbol>
 <symbol id="i-ruler" viewBox="0 0 24 24"><rect x="2" y="9" width="20" height="6" rx="1.5"/><line x1="6.5" y1="9" x2="6.5" y2="12"/><line x1="11" y1="9" x2="11" y2="12"/><line x1="15.5" y1="9" x2="15.5" y2="12"/></symbol>
 <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 21a2 2 0 0 0 3 0"/></symbol>
 <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>

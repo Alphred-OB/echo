@@ -55,6 +55,23 @@
         Sign in with Echo
       </button>
 
+      <!-- ── Live Acoustic Transmission Visualizer ── -->
+      <div id="txVisualizerContainer" style="display:none; margin: 16px 0 10px; background: rgba(37, 99, 235, 0.03); border: 1px solid var(--border-strong); border-radius: var(--r-md); padding: 12px 14px; box-shadow: 0 2px 10px -2px rgba(37, 99, 235, 0.08); transition: all 0.25s;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+          <span style="font-size: var(--fs-tiny); font-weight: 700; color: var(--accent); display:flex; align-items:center; gap: 6px;">
+            <span class="wave anim" id="txWaveAnim" style="height: 14px;"><i style="width: 2px;"></i><i style="width: 2px;"></i><i style="width: 2px;"></i></span>
+            <span id="txLabel">Transmitting Acoustic Nonce…</span>
+          </span>
+          <span class="mono" style="font-size: var(--fs-tiny); color: var(--dim); font-weight: 700;" id="txProtoLabel">18–20 kHz</span>
+        </div>
+        <canvas id="txCanvas" style="width: 100%; height: 42px; border-radius: 6px; background: #090d16; display: block;"></canvas>
+        <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--dim); font-family: 'JetBrains Mono', monospace; font-weight: 600; margin-top: 6px; padding: 0 2px;">
+          <span>0 kHz</span>
+          <span style="color: var(--accent);">Ultrasound Transmission Band</span>
+          <span>24 kHz</span>
+        </div>
+      </div>
+
       <ul class="steps" id="steps" style="display:none">
         <li id="st1">Getting a one-time code…</li>
         <li id="st2">Sending it to your phone silently…</li>
@@ -123,7 +140,8 @@
 const $ = id => document.getElementById(id);
 let ggwave = null, context = null, instance = null;
 let session = null, ws = null, txCount = 0, txTimer = null, startedAt = 0;
-const MAX_AUTO_TX = 3;
+let txAnalyser = null, txAnimFrame = null;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function toggleNav(force) {
   const links = $('navLinks');
@@ -165,13 +183,57 @@ async function matchCode(nonce) {
   return String(10 + new Uint8Array(d)[0] % 90);
 }
 
-/* ── show / hide password ── */
-function toggleEye(inputId, iconId) {
-  const inp  = $(inputId);
-  const icon = $(iconId);
-  const show = inp.type === 'password';
-  inp.type = show ? 'text' : 'password';
-  icon.querySelector('use').setAttribute('href', show ? '#i-eye-off' : '#i-eye');
+let txFreqData = null;
+
+function ensureTxCanvasDimensions(c) {
+  const dpr = window.devicePixelRatio || 1;
+  const targetW = Math.round(c.clientWidth * dpr);
+  const targetH = Math.round(c.clientHeight * dpr);
+  if (c.width !== targetW || c.height !== targetH) {
+    c.width = targetW;
+    c.height = targetH;
+  }
+}
+
+/* ── Live Acoustic Transmission Visualizer (60fps Optimized) ── */
+function drawTxVisualizer() {
+  if (!txAnalyser) return;
+  const c = $('txCanvas');
+  if (!c) return;
+  ensureTxCanvasDimensions(c);
+  const W = c.width, H = c.height, dpr = window.devicePixelRatio || 1;
+  const ctx = c.getContext('2d', { alpha: false });
+
+  // Fast clear
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!txFreqData) txFreqData = new Uint8Array(txAnalyser.frequencyBinCount);
+  txAnalyser.getByteFrequencyData(txFreqData);
+
+  const bars = 36;
+  const bw = W / bars;
+  const maxF = (context ? context.sampleRate / 2 : 24000);
+  const ultraStart = 17500;
+
+  for (let i = 0; i < bars; i++) {
+    const bin = Math.floor((i / bars) * txFreqData.length);
+    const val = txFreqData[bin] / 255;
+    const f = (i / bars) * maxF;
+    const isUltra = f >= ultraStart;
+    const h = Math.max(2 * dpr, val * (H - 4 * dpr));
+
+    if (isUltra && val > 0.1) {
+      ctx.fillStyle = '#3b82f6';
+    } else if (isUltra) {
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+    } else {
+      ctx.fillStyle = val > 0.08 ? '#64748b' : 'rgba(100, 116, 139, 0.2)';
+    }
+    ctx.fillRect(i * bw + 1, H - h, Math.max(bw - 2 * dpr, 1), h);
+  }
+
+  txAnimFrame = requestAnimationFrame(drawTxVisualizer);
 }
 
 async function startLogin() {
@@ -236,36 +298,79 @@ function transmitNonce() {
   if (!session) return;
   txCount++;
   setStep(2, 'active');
-  const protoName = 'GGWAVE_PROTOCOL_' + $('proto').value;
+
+  $('txVisualizerContainer').style.display = 'block';
+  $('txLabel').textContent = 'Transmitting Acoustic Nonce…';
+  $('txWaveAnim').style.display = 'inline-flex';
+  const proto = $('proto').value;
+  $('txProtoLabel').textContent = proto.startsWith('ULTRA') ? '18–20 kHz' : 'Audible';
+
+  const protoName = 'GGWAVE_PROTOCOL_' + proto;
   const waveform  = ggwave.encode(instance, 'E1:' + session.nonce, ggwave.ProtocolId[protoName], 25);
   const f32 = convertTypedArray(waveform, Float32Array);
   const buf = context.createBuffer(1, f32.length, context.sampleRate);
   buf.getChannelData(0).set(f32);
+
   const src = context.createBufferSource();
   src.buffer = buf;
-  src.connect(context.destination);
+
+  // Live analyser tap
+  txAnalyser = context.createAnalyser();
+  txAnalyser.fftSize = 256;
+  txAnalyser.smoothingTimeConstant = 0.2;
+  src.connect(txAnalyser);
+  txAnalyser.connect(context.destination);
+
+  drawTxVisualizer();
+
   src.onended = () => {
+    if (txAnimFrame) {
+      cancelAnimationFrame(txAnimFrame);
+      txAnimFrame = null;
+    }
+    if (txAnalyser) {
+      try { txAnalyser.disconnect(); } catch {}
+      txAnalyser = null;
+    }
+
     setStep(2, 'done');
     setStep(3, 'active');
+    $('txLabel').textContent = '✓ Nonce Transmitted to Phone';
+    $('txWaveAnim').style.display = 'none';
+
     $('status').className = 'status';
     $('status').textContent = 'Check your phone — it should show the number ' + session.match + '. If it matches, tap Approve.';
     $('btnRetry').style.display = '';
-    if (txCount < MAX_AUTO_TX) {
-      txTimer = setTimeout(() => { if ($('st3').className === 'active') transmitNonce(); }, 5000);
-    } else {
-      txTimer = setTimeout(() => {
-        if ($('st3').className === 'active')
-          fail('Your phone did not pick up the sound. Move closer to your computer, turn up the volume, or switch to "Audible chirps" mode above.');
-      }, Math.max(3000, session.ttlMs - (Date.now() - startedAt)));
-    }
+
+    // Single session expiry timeout (retransmission is manual via "Send again")
+    clearTimeout(txTimer);
+    const remainingTime = Math.max(3000, session.ttlMs - (Date.now() - startedAt));
+    txTimer = setTimeout(() => {
+      if ($('st3').className === 'active') {
+        fail('Session expired. Tap "Send again" or enter your username to restart.');
+      }
+    }, remainingTime);
   };
   src.start(0);
 }
 
-function retransmit() { if (session) { clearTimeout(txTimer); transmitNonce(); } }
+function retransmit() {
+  if (session) {
+    clearTimeout(txTimer);
+    transmitNonce();
+  }
+}
 
 function fail(msg) {
   clearTimeout(txTimer);
+  if (txAnimFrame) {
+    cancelAnimationFrame(txAnimFrame);
+    txAnimFrame = null;
+  }
+  if (txAnalyser) {
+    try { txAnalyser.disconnect(); } catch {}
+    txAnalyser = null;
+  }
   ['st1','st2','st3'].forEach(id => { if ($(id).className === 'active') $(id).className = 'fail'; });
   $('status').className = 'status bad';
   $('status').textContent = msg;

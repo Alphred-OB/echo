@@ -43,3 +43,7 @@ ehthumbs.db
 # Build artifacts / temporary
 coverage/
 dist/
+*.apk
+public/*.apk
+**/android/build/
+**/build/

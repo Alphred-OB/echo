@@ -771,21 +771,152 @@ select:focus {
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
+/* ── Step & Navigation Controls ── */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  margin-bottom: 8px;
+  transition: color 0.2s, background-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.back-btn:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+/* ── Premium QR Code Frame ── */
 .qr {
   display: flex;
   justify-content: center;
-  padding: 18px;
+  padding: 16px;
   background: #ffffff;
   border-radius: var(--r-lg);
-  margin: 18px auto;
+  margin: 16px auto 14px;
   width: fit-content;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.02),
+    0 12px 36px -8px rgba(37, 99, 235, 0.09),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  border: 1px solid var(--border-strong);
+  position: relative;
 }
 .qr svg {
   display: block;
-  width: 180px;
-  height: 180px;
+  width: 176px;
+  height: 176px;
+  border-radius: 6px;
+}
+
+/* ── Pairing Link & Copy Bar ── */
+.pairing-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37, 99, 235, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 6px 6px 6px 12px;
+  margin: 14px 0 10px;
+  transition: border-color 0.2s;
+}
+.pairing-link-row:hover {
+  border-color: var(--border-hover);
+}
+.pairing-link-text {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: var(--fs-tiny);
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+.copy-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.copy-btn.copied {
+  background: var(--ok-soft);
+  color: var(--ok);
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+/* ── Live Beacon Waiting Status ── */
+.beacon-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  margin: 6px auto 14px;
+}
+.beacon-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  position: relative;
+  flex-shrink: 0;
+}
+.beacon-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  opacity: 0.8;
+  animation: beacon-pulse 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+@keyframes beacon-pulse {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  100% { transform: scale(2.2); opacity: 0; }
 }
 
 .divider {
@@ -797,7 +928,7 @@ select:focus {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin: 28px 0 12px;
+  margin: 24px 0 12px;
 }
 .divider::before, .divider::after {
   content: '';
@@ -1653,6 +1784,19 @@ footer.premium-footer .brand .word {
     width: 100%;
   }
 }
+
+/* ── Accessibility: Unified Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .wave.anim i,
+  .brand .word,
+  .btn,
+  .kpi,
+  .card {
+    animation: none !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 
 
 

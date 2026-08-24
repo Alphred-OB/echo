@@ -73,18 +73,18 @@
     <!-- ── KEY CARD: main listening screen ── -->
     <div class="card center" id="keyCard" style="display:none">
 
-      <!-- Pulsing ring (shows animated when listening) -->
-      <div class="listen-ring idle" id="listenRing">
-        <div class="ring"></div>
-        <div class="ring"></div>
-        <div class="ring"></div>
-        <div class="inner" id="listenInner">
-          <svg class="ic xl"><use href="#i-mic"/></svg>
+      <!-- Real-Time Acoustic Micro-Spectrum Visualizer -->
+      <div class="mic-visualizer-box" id="micVisBox">
+        <div class="mic-badge" id="micBadge">
+          <svg class="ic lg"><use href="#i-mic"/></svg>
+        </div>
+        <canvas id="micCanvas" class="mic-canvas"></canvas>
+        <div class="freq-scale">
+          <span>0 kHz</span>
+          <span class="ultrasound-tag" id="ultraTag">18–20 kHz Ultrasound</span>
+          <span>24 kHz</span>
         </div>
       </div>
-
-      <!-- Hidden wave kept for JS compatibility -->
-      <div id="listenWave" style="display:none"><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
       <h2 style="justify-content:center" id="keyTitle">Ready</h2>
 
@@ -238,6 +238,8 @@ let ggwave = null, context = null, instance = null;
 let mediaStream = null, recorder = null, stream = null, listening = false;
 let pendingNonce = null, lastNonce = null, deferredInstall = null;
 let manualOpen = false;
+let micAnalyser = null, micAnimFrame = null, ultraTimer = null;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // Scanner variables & functions
 let scannerVideo = null, scannerStream = null, scannerCanvas = null, scannerActive = false;
@@ -382,6 +384,7 @@ async function route() {
     $('keyCard').style.display = '';
     $('whoami').textContent  = username;
     $('devname').textContent = (await kvGet('deviceName')) || 'this device';
+    drawIdleMicCanvas();
     renderHistory();
   } else {
     $('emptyCard').style.display = '';
@@ -452,6 +455,96 @@ function convertTypedArray(src, type) {
   return new type(buffer);
 }
 
+let micFreqData = null;
+let isUltraDetected = false;
+
+function ensureCanvasDimensions(c) {
+  const dpr = window.devicePixelRatio || 1;
+  const targetW = Math.round(c.clientWidth * dpr);
+  const targetH = Math.round(c.clientHeight * dpr);
+  if (c.width !== targetW || c.height !== targetH) {
+    c.width = targetW;
+    c.height = targetH;
+  }
+}
+
+/* ── Real-Time Acoustic Spectrum Visualizer (60fps Optimized) ── */
+function drawIdleMicCanvas() {
+  const c = $('micCanvas');
+  if (!c) return;
+  ensureCanvasDimensions(c);
+  const W = c.width, H = c.height, dpr = window.devicePixelRatio || 1;
+  const ctx = c.getContext('2d', { alpha: false });
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle baseline
+  ctx.fillStyle = 'rgba(100, 116, 139, 0.2)';
+  const bars = 36, bw = W / bars;
+  for (let i = 0; i < bars; i++) {
+    ctx.fillRect(i * bw + 1, H - 3 * dpr, Math.max(bw - 2 * dpr, 1), 2 * dpr);
+  }
+}
+
+function drawMicSpectrum() {
+  if (!listening || !micAnalyser) return;
+  const c = $('micCanvas');
+  if (!c) return;
+  ensureCanvasDimensions(c);
+  const W = c.width, H = c.height, dpr = window.devicePixelRatio || 1;
+  const ctx = c.getContext('2d', { alpha: false });
+
+  // Fast clear
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!micFreqData) micFreqData = new Uint8Array(micAnalyser.frequencyBinCount);
+  micAnalyser.getByteFrequencyData(micFreqData);
+
+  const bars = 36;
+  const bw = W / bars;
+  const maxF = (context ? context.sampleRate / 2 : 24000);
+  const ultraStart = 17500;
+  let ultraEnergy = 0, ultraCount = 0;
+
+  for (let i = 0; i < bars; i++) {
+    const bin = Math.floor((i / bars) * micFreqData.length);
+    const val = micFreqData[bin] / 255;
+    const f = (i / bars) * maxF;
+    const isUltra = f >= ultraStart;
+
+    if (isUltra) {
+      ultraEnergy += val;
+      ultraCount++;
+    }
+
+    const h = Math.max(2 * dpr, val * (H - 4 * dpr));
+    if (isUltra && val > 0.25) {
+      ctx.fillStyle = '#3b82f6';
+    } else if (isUltra) {
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+    } else {
+      ctx.fillStyle = val > 0.08 ? '#64748b' : 'rgba(100, 116, 139, 0.2)';
+    }
+
+    ctx.fillRect(i * bw + 1, H - h, Math.max(bw - 2 * dpr, 1), h);
+  }
+
+  // Ultrasound burst state update (without DOM thrashing)
+  const avgUltra = ultraCount ? ultraEnergy / ultraCount : 0;
+  if (avgUltra > 0.22 && !isUltraDetected) {
+    isUltraDetected = true;
+    $('micVisBox').classList.add('ultrasound-detected');
+    clearTimeout(ultraTimer);
+    ultraTimer = setTimeout(() => {
+      isUltraDetected = false;
+      if (listening) $('micVisBox').classList.remove('ultrasound-detected');
+    }, 450);
+  }
+
+  micAnimFrame = requestAnimationFrame(drawMicSpectrum);
+}
+
 /* ── Listen toggle ── */
 function toggleListen() { listening ? stopListen() : startListen(); }
 
@@ -465,10 +558,14 @@ function startListen() {
   }).then(s => {
     stream      = s;
     mediaStream = context.createMediaStreamSource(s);
-    recorder    = context.createScriptProcessor(1024, 1, 1);
+    recorder    = context.createScriptProcessor(2048, 1, 1);
+    const int8Buf = new Int8Array(2048);
     recorder.onaudioprocess = e => {
-      const samples = new Float32Array(e.inputBuffer.getChannelData(0));
-      const res     = ggwave.decode(instance, convertTypedArray(samples, Int8Array));
+      const samples = e.inputBuffer.getChannelData(0);
+      for (let i = 0; i < samples.length; i++) {
+        int8Buf[i] = Math.max(-128, Math.min(127, Math.floor(samples[i] * 128)));
+      }
+      const res = ggwave.decode(instance, int8Buf);
       if (res && res.length > 0) {
         const text = new TextDecoder('utf-8').decode(res);
         if (text === lastNonce) return;
@@ -481,16 +578,24 @@ function startListen() {
     };
     mediaStream.connect(recorder);
     recorder.connect(context.destination);
+
+    // Live acoustic analyser
+    micAnalyser = context.createAnalyser();
+    micAnalyser.fftSize = 256;
+    micAnalyser.smoothingTimeConstant = 0.3;
+    mediaStream.connect(micAnalyser);
+
     listening = true;
 
-    // Update ring to active (pulsing)
-    $('listenRing').classList.remove('idle');
-    $('listenInner').innerHTML = '<svg class="ic xl" style="color:var(--ok)"><use href="#i-mic"/></svg>';
+    // Update visualizer state
+    $('micVisBox').classList.add('active');
+    $('micBadge').innerHTML = '<svg class="ic lg" style="color:var(--ok)"><use href="#i-mic"/></svg>';
+    drawMicSpectrum();
 
     $('listenLabel').textContent = 'Stop listening';
     $('btnListen').className = 'btn red';
     $('keyTitle').textContent = 'Listening…';
-    setStatus('Waiting for a sign-in sound from your computer.');
+    setStatus('Waiting for an ultrasonic sign-in sound from your computer.');
   }).catch(err => {
     setStatus(
       err.name === 'NotAllowedError'
@@ -502,14 +607,25 @@ function startListen() {
 }
 
 function stopListen() {
+  if (micAnimFrame) {
+    cancelAnimationFrame(micAnimFrame);
+    clearTimeout(micAnimFrame);
+    micAnimFrame = null;
+  }
+  if (micAnalyser) {
+    try { micAnalyser.disconnect(); } catch {}
+    micAnalyser = null;
+  }
   if (recorder)    { recorder.disconnect(); recorder = null; }
   if (mediaStream) { mediaStream.disconnect(); mediaStream = null; }
   if (stream)      { stream.getTracks().forEach(t => t.stop()); stream = null; }
   listening = false;
+  isUltraDetected = false;
 
-  // Reset ring to idle
-  $('listenRing').classList.add('idle');
-  $('listenInner').innerHTML = '<svg class="ic xl"><use href="#i-mic"/></svg>';
+  // Reset visualizer to idle state
+  $('micVisBox').classList.remove('active', 'ultrasound-detected');
+  $('micBadge').innerHTML = '<svg class="ic lg"><use href="#i-mic"/></svg>';
+  drawIdleMicCanvas();
 
   $('listenLabel').textContent = 'Start listening';
   $('btnListen').className = 'btn green';
@@ -542,6 +658,9 @@ async function heard(nonce) {
     setStatus('This device is not set up as a key. Please enroll it first.', 'bad');
     return;
   }
+
+  // Visual burst confirmation on the micro-spectrum
+  $('micVisBox').classList.add('ultrasound-detected');
 
   try {
     const res = await fetch(
