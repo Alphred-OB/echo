@@ -253,6 +253,10 @@
 
 <script>
 const $ = id => document.getElementById(id);
+const API_BASE = (location.protocol === 'file:' || location.origin === 'null' || !location.origin)
+  ? 'http://localhost:8000'
+  : '';
+
 let enrollUrl = '', enrollToken = '', pollTimer = null;
 
 async function signup() {
@@ -277,7 +281,7 @@ async function signup() {
   $('btnNext').disabled = true;
 
   try {
-    const r = await fetch('/api/signup', {
+    const r = await fetch(API_BASE + '/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email })
@@ -293,7 +297,10 @@ async function signup() {
     }
 
     enrollToken = data.enrollToken;
-    enrollUrl = `${location.protocol}//${location.host}/phone/phone.html?token=${enrollToken}`;
+    const origin = (location.protocol === 'file:' || location.origin === 'null' || !location.origin)
+      ? 'http://localhost:8000'
+      : `${location.protocol}//${location.host}`;
+    enrollUrl = `${origin}/phone/phone.html?token=${enrollToken}`;
 
     // Render QR Code
     $('qrBox').innerHTML = '';
@@ -310,10 +317,10 @@ async function signup() {
     $('step2').style.display = 'block';
 
     startPollingStatus();
-  } catch {
+  } catch (err) {
     $('btnNext').disabled = false;
     formStatus.className = 'status bad';
-    formStatus.textContent = 'Network error — check server connection';
+    formStatus.textContent = 'Network error — make sure you open http://localhost:8000/web/signup.html or check server';
     formStatus.style.display = 'block';
   }
 }
@@ -322,7 +329,7 @@ function startPollingStatus() {
   clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const res = await fetch(`/api/signup/status?token=${encodeURIComponent(enrollToken)}`);
+      const res = await fetch(`${API_BASE}/api/signup/status?token=${encodeURIComponent(enrollToken)}`);
       if (res.ok) {
         const status = await res.json();
         if (status.enrolled) {
