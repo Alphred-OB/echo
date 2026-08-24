@@ -303,24 +303,20 @@ async function signup() {
     enrollUrl = `${origin}/phone/phone.html?token=${enrollToken}`;
 
     // Render QR Code
-    $('qrBox').innerHTML = '';
-    new QRCode($('qrBox'), {
-      text: enrollUrl,
-      width: 190,
-      height: 190,
-      colorDark: '#0f172a',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
+    const qr = qrcode(0, 'M');
+    qr.addData(enrollUrl);
+    qr.make();
+    $('qrBox').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 1 });
 
     $('step1').style.display = 'none';
     $('step2').style.display = 'block';
 
     startPollingStatus();
   } catch (err) {
+    console.error('Signup error:', err);
     $('btnNext').disabled = false;
     formStatus.className = 'status bad';
-    formStatus.textContent = 'Network error — make sure you open http://localhost:8000/web/signup.html or check server';
+    formStatus.textContent = 'Could not start sign-up. Please check your connection.';
     formStatus.style.display = 'block';
   }
 }
