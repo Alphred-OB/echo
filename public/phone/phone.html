@@ -475,11 +475,11 @@ function drawIdleMicCanvas() {
   ensureCanvasDimensions(c);
   const W = c.width, H = c.height, dpr = window.devicePixelRatio || 1;
   const ctx = c.getContext('2d', { alpha: false });
-  ctx.fillStyle = '#090d16';
+  ctx.fillStyle = '#f8fafc';
   ctx.fillRect(0, 0, W, H);
 
   // Subtle baseline
-  ctx.fillStyle = 'rgba(100, 116, 139, 0.2)';
+  ctx.fillStyle = '#cbd5e1';
   const bars = 36, bw = W / bars;
   for (let i = 0; i < bars; i++) {
     ctx.fillRect(i * bw + 1, H - 3 * dpr, Math.max(bw - 2 * dpr, 1), 2 * dpr);
@@ -494,8 +494,8 @@ function drawMicSpectrum() {
   const W = c.width, H = c.height, dpr = window.devicePixelRatio || 1;
   const ctx = c.getContext('2d', { alpha: false });
 
-  // Fast clear
-  ctx.fillStyle = '#090d16';
+  // Clean light clear
+  ctx.fillStyle = '#f8fafc';
   ctx.fillRect(0, 0, W, H);
 
   if (!micFreqData) micFreqData = new Uint8Array(micAnalyser.frequencyBinCount);
@@ -519,12 +519,12 @@ function drawMicSpectrum() {
     }
 
     const h = Math.max(2 * dpr, val * (H - 4 * dpr));
-    if (isUltra && val > 0.25) {
-      ctx.fillStyle = '#3b82f6';
+    if (isUltra && val > 0.22) {
+      ctx.fillStyle = '#2563eb';
     } else if (isUltra) {
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+      ctx.fillStyle = 'rgba(37, 99, 235, 0.4)';
     } else {
-      ctx.fillStyle = val > 0.08 ? '#64748b' : 'rgba(100, 116, 139, 0.2)';
+      ctx.fillStyle = val > 0.08 ? '#94a3b8' : '#cbd5e1';
     }
 
     ctx.fillRect(i * bw + 1, H - h, Math.max(bw - 2 * dpr, 1), h);
