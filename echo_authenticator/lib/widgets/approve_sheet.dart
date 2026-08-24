@@ -185,29 +185,13 @@ class _ApproveSheetState extends State<ApproveSheet> with SingleTickerProviderSt
               ),
               const SizedBox(height: 16),
             ] else ...[
-              // ── Approve Challenge Header ──
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const EchoWaveIndicator(height: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    'ECHO SIGN-IN REQUEST',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                      color: EchoTheme.accent,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+              const EchoWaveIndicator(height: 18),
+              const SizedBox(height: 14),
 
               Text(
-                'Sign in to your laptop?',
+                'Sign-in Request',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: isDark ? EchoTheme.textDark : EchoTheme.textLight,
                 ),
@@ -215,7 +199,7 @@ class _ApproveSheetState extends State<ApproveSheet> with SingleTickerProviderSt
               const SizedBox(height: 4),
 
               Text(
-                'Confirm the 2-digit match code on your computer screen.',
+                'Confirm the 2-digit code on your computer screen',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,

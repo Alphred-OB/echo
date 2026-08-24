@@ -80,7 +80,6 @@ class _ListeningScreenState extends State<ListeningScreen> {
   }
 
   Future<void> _handleNonceReceived(String nonce) async {
-    // Flash ultrasound detected tag
     setState(() => _hasUltrasound = true);
     _ultrasoundFlashTimer?.cancel();
     _ultrasoundFlashTimer = Timer(const Duration(milliseconds: 1200), () {
@@ -133,7 +132,7 @@ class _ListeningScreenState extends State<ListeningScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Unpair this device?'),
         content: const Text(
-          'This will remove your cryptographic key from this device. You will need to re-scan the pairing code on your laptop to use it again.',
+          'This will remove your security key from this phone. You will need to re-scan the QR code to use it again.',
         ),
         actions: [
           TextButton(
@@ -147,7 +146,7 @@ class _ListeningScreenState extends State<ListeningScreen> {
               widget.onUnpaired();
             },
             style: ElevatedButton.styleFrom(backgroundColor: EchoTheme.bad),
-            child: const Text('Unpair Device'),
+            child: const Text('Unpair'),
           ),
         ],
       ),
@@ -159,6 +158,7 @@ class _ListeningScreenState extends State<ListeningScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? EchoTheme.bgDark : EchoTheme.bgLight,
       appBar: AppBar(
         title: const Row(
           mainAxisSize: MainAxisSize.min,
@@ -189,68 +189,48 @@ class _ListeningScreenState extends State<ListeningScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ── Device & User Card ──
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: EchoTheme.accentSoft,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: EchoTheme.accent.withValues(alpha: 0.2)),
-                        ),
-                        child: const Icon(Icons.phone_android_rounded, color: EchoTheme.accent, size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.credentials.username,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${widget.credentials.deviceName} · ${widget.credentials.deviceId}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? EchoTheme.mutedDark : EchoTheme.mutedLight,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _isListening ? EchoTheme.okSoft : EchoTheme.warnSoft,
-                          borderRadius: BorderRadius.circular(99),
-                          border: Border.all(
-                            color: _isListening ? EchoTheme.ok.withValues(alpha: 0.3) : EchoTheme.warn.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          _isListening ? 'ACTIVE' : 'IDLE',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: _isListening ? EchoTheme.ok : EchoTheme.warn,
-                          ),
-                        ),
-                      ),
-                    ],
+              // ── Minimalist User & Status Header ──
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isDark ? EchoTheme.surfaceDark : EchoTheme.surfaceLight,
+                  borderRadius: BorderRadius.circular(EchoTheme.rMd),
+                  border: Border.all(
+                    color: isDark ? EchoTheme.borderDark : EchoTheme.borderLight,
                   ),
                 ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isListening ? EchoTheme.ok : EchoTheme.dimLight,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.credentials.username,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _isListening ? 'Listening' : 'Paused',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _isListening ? EchoTheme.ok : EchoTheme.dimLight,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // ── Live Ultrasound Spectrum ──
               LiveSpectrumWidget(
@@ -258,7 +238,7 @@ class _ListeningScreenState extends State<ListeningScreen> {
                 isListening: _isListening,
                 hasUltrasound: _hasUltrasound,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // ── Toggle Listening Button ──
               SizedBox(
@@ -267,79 +247,71 @@ class _ListeningScreenState extends State<ListeningScreen> {
                   onPressed: _toggleListen,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _isListening ? EchoTheme.bad : EchoTheme.ok,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(EchoTheme.rMd),
+                    ),
                   ),
                   icon: Icon(
                     _isListening ? Icons.mic_off_rounded : Icons.mic_rounded,
                     color: Colors.white,
+                    size: 20,
                   ),
                   label: Text(
                     _isListening ? 'Stop Listening' : 'Start Listening',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-
-              Text(
-                _isListening
-                    ? 'Keep this app open near your computer when signing in.'
-                    : 'Tap "Start Listening" to detect sign-in sound bursts.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? EchoTheme.dimDark : EchoTheme.dimLight,
-                ),
-              ),
               const SizedBox(height: 28),
 
-              // ── Activity Log ──
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'RECENT SIGN-INS',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    color: isDark ? EchoTheme.dimDark : EchoTheme.dimLight,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              if (_activityLog.isEmpty)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Center(
-                      child: Text(
-                        'No authentication events yet.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? EchoTheme.dimDark : EchoTheme.dimLight,
-                        ),
-                      ),
+              // ── Activity History ──
+              if (_activityLog.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'RECENT ACTIVITY',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: isDark ? EchoTheme.dimDark : EchoTheme.dimLight,
                     ),
                   ),
-                )
-              else
+                ),
+                const SizedBox(height: 8),
                 Column(
                   children: _activityLog.map((log) {
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        dense: true,
-                        leading: const Icon(Icons.check_circle_rounded, color: EchoTheme.ok, size: 20),
-                        title: Text(log, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isDark ? EchoTheme.surfaceDark : EchoTheme.surfaceLight,
+                        borderRadius: BorderRadius.circular(EchoTheme.rSm),
+                        border: Border.all(
+                          color: isDark ? EchoTheme.borderDark : EchoTheme.borderLight,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: EchoTheme.ok, size: 16),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              log,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }).toList(),
                 ),
+              ],
             ],
           ),
         ),

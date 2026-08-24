@@ -17,7 +17,7 @@ class EnrollmentScreen extends StatefulWidget {
 
 class _EnrollmentScreenState extends State<EnrollmentScreen> {
   final MobileScannerController _scannerController = MobileScannerController();
-  final TextEditingController _nameController = TextEditingController(text: 'My Mobile Key');
+  final TextEditingController _nameController = TextEditingController(text: 'My Phone');
   final TextEditingController _urlController = TextEditingController(text: 'http://localhost:8000');
   final TextEditingController _tokenController = TextEditingController();
 
@@ -78,14 +78,12 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
     });
 
     try {
-      // 1. Generate NIST P-256 Keypair
       final keyPair = await CryptoService.generateKeyPair();
       final publicKeyJwk = CryptoService.exportPublicKeyJwk(keyPair.publicKey);
       final privateKeyStr = CryptoService.exportPrivateKey(keyPair.privateKey);
 
       final deviceName = _nameController.text.trim().isEmpty ? 'Phone Key' : _nameController.text.trim();
 
-      // 2. Register public key with Echo Server
       final result = await ApiService.enroll(
         serverUrl: serverUrl,
         enrollToken: enrollToken,
@@ -101,7 +99,6 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
         return;
       }
 
-      // 3. Save credentials securely to iOS Keychain / Android Keystore
       await StorageService.saveCredentials(
         privateKey: privateKeyStr,
         deviceId: result.deviceId!,
@@ -124,6 +121,7 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? EchoTheme.bgDark : EchoTheme.bgLight,
       appBar: AppBar(
         title: const Row(
           mainAxisSize: MainAxisSize.min,
@@ -148,30 +146,11 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Header Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: EchoTheme.accentSoft,
-                  borderRadius: BorderRadius.circular(99),
-                  border: Border.all(color: EchoTheme.accent.withValues(alpha: 0.2)),
-                ),
-                child: const Text(
-                  'DEVICE PAIRING',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    color: EchoTheme.accent,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
+              const SizedBox(height: 8),
               Text(
-                'Pair with your computer',
+                'Pair with Computer',
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: isDark ? EchoTheme.textDark : EchoTheme.textLight,
                 ),
@@ -179,7 +158,7 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
               const SizedBox(height: 6),
 
               Text(
-                'Scan the QR code shown on your laptop screen to register this device as your security key.',
+                'Scan the QR code on your computer screen',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -209,9 +188,9 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
               ],
 
               if (!_isManualMode) ...[
-                // ── Scanner Viewfinder Card ──
+                // Viewfinder Card
                 Container(
-                  height: 280,
+                  height: 300,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.black,
@@ -236,10 +215,9 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
                         controller: _scannerController,
                         onDetect: _onDetect,
                       ),
-                      // Viewfinder Reticle
                       Container(
-                        width: 200,
-                        height: 200,
+                        width: 210,
+                        height: 210,
                         decoration: BoxDecoration(
                           border: Border.all(color: EchoTheme.accent, width: 2.5),
                           borderRadius: BorderRadius.circular(16),
@@ -249,40 +227,23 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
                         Container(
                           color: Colors.black54,
                           child: const Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircularProgressIndicator(color: Colors.white),
-                                SizedBox(height: 14),
-                                Text(
-                                  'Enrolling cryptographic key…',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            child: CircularProgressIndicator(color: Colors.white),
                           ),
                         ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
 
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() => _isManualMode = true);
-                  },
-                  icon: const Icon(Icons.keyboard_outlined, size: 18),
-                  label: const Text(
+                TextButton(
+                  onPressed: () => setState(() => _isManualMode = true),
+                  child: const Text(
                     'Enter pairing token manually',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                 ),
               ] else ...[
-                // ── Manual Entry Card ──
+                // Manual Entry Card
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
@@ -360,39 +321,14 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() => _isManualMode = false);
-                  },
-                  icon: const Icon(Icons.qr_code_scanner, size: 18),
-                  label: const Text(
+                TextButton(
+                  onPressed: () => setState(() => _isManualMode = false),
+                  child: const Text(
                     'Switch back to camera scanner',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                 ),
               ],
-
-              const SizedBox(height: 24),
-              // Security note
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shield_outlined,
-                    size: 16,
-                    color: isDark ? EchoTheme.dimDark : EchoTheme.dimLight,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Secured by Android Keystore / iOS Keychain',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? EchoTheme.dimDark : EchoTheme.dimLight,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
