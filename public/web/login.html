@@ -13,147 +13,239 @@
   document.documentElement.setAttribute('data-theme', savedTheme || 'light');
 })();
 </script>
+<style>
+/* ── Clean Login View Styles ── */
+.auth-box {
+  max-width: 420px;
+  margin: 40px auto 0;
+}
+
+.brand-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.brand-header .wave {
+  margin-bottom: 12px;
+}
+
+.auth-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 0 0 6px;
+  color: var(--fg);
+}
+
+.auth-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+  text-align: center;
+}
+
+/* Match Code Card */
+.match-card {
+  margin: 20px 0;
+  padding: 24px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 8px 30px -10px rgba(0, 0, 0, 0.05);
+}
+
+.match-code-val {
+  font-size: 52px;
+  font-weight: 900;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 4px;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.match-caption {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Radar & Pulse */
+.radar-ring {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-ring .pulse-wave {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: radar-pulse 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  opacity: 0;
+}
+
+.radar-ring .pulse-wave:nth-child(2) {
+  animation-delay: 0.6s;
+}
+
+.radar-ring .pulse-wave:nth-child(3) {
+  animation-delay: 1.2s;
+}
+
+@keyframes radar-pulse {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.radar-icon-center {
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+  z-index: 2;
+}
+
+.auth-footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+</style>
 </head>
 <body>
 <script src="../icons.js"></script>
-<div class="wrap" style="padding-top: 60px; padding-bottom: 60px;">
-  <div style="max-width: 460px; margin: 20px auto 0;">
+<div class="wrap" style="padding-top: 40px; padding-bottom: 60px;">
+  <div class="auth-box">
 
-    <!-- ── Main sign-in card (sound-based) ── -->
-    <div class="card" id="soundCard">
-      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 28px; justify-content: center; display: flex;">
-        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="word">echo</span>
-      </a>
+    <!-- ── State 1: Clean Username Form ── -->
+    <div class="card" id="formState">
+      <div class="brand-header">
+        <a class="brand" href="home.html" aria-label="Echo home">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word" style="font-size: 22px;">echo</span>
+        </a>
+      </div>
 
-      <h2>
-        <svg class="ic" style="margin-right:6px"><use href="#i-volume"/></svg>
-        Welcome back
-      </h2>
-      <p class="sub">Make sure your phone is nearby with Echo open, then tap the button below. Your computer will play a silent sound and your phone will sign you in automatically.</p>
+      <h2 class="auth-title" style="text-align: center;">Welcome back</h2>
+      <p class="auth-sub" style="margin-bottom: 24px;">Sign in passwordlessly with ultrasonic sound</p>
 
-      <label for="username">
-        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
-        Username
-      </label>
+      <label for="username" style="font-size: 13px; font-weight: 700;">Username</label>
       <input type="text" id="username" autocomplete="username" placeholder="your username" spellcheck="false" autofocus
-             onkeydown="if(event.key==='Enter')startLogin()">
+             onkeydown="if(event.key==='Enter')startLogin()" style="margin-bottom: 18px;">
 
-      <details style="margin-top:14px">
-        <summary style="font-size:var(--fs-small); font-weight:600; color:var(--dim); cursor:pointer;">
-          <svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="15" y2="12"/><line x1="4" y1="17" x2="18" y2="17"/></svg>
-          Sound quality options
-        </summary>
-        <select id="proto" style="margin-top:8px">
-          <option value="ULTRASOUND_NORMAL" selected>Silent (ultrasound) — best option, works automatically</option>
-          <option value="AUDIBLE_NORMAL">Audible chirps — use this if silent mode doesn't work on your device</option>
-        </select>
-      </details>
+      <div class="status" id="formStatus" style="margin-bottom: 12px; display: none;"></div>
 
-      <button class="btn" id="btnLogin" onclick="startLogin()">
+      <button class="btn" id="btnContinue" onclick="startLogin()">
         <svg class="ic"><use href="#i-volume"/></svg>
         Sign in with Echo
       </button>
 
-      <!-- ── Live Acoustic Transmission Visualizer ── -->
-      <div id="txVisualizerContainer" style="display:none; margin: 16px 0 10px; background: rgba(37, 99, 235, 0.03); border: 1px solid var(--border-strong); border-radius: var(--r-md); padding: 12px 14px; box-shadow: 0 2px 10px -2px rgba(37, 99, 235, 0.08); transition: all 0.25s;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-          <span style="font-size: var(--fs-tiny); font-weight: 700; color: var(--accent); display:flex; align-items:center; gap: 6px;">
-            <span class="wave anim" id="txWaveAnim" style="height: 14px;"><i style="width: 2px;"></i><i style="width: 2px;"></i><i style="width: 2px;"></i></span>
-            <span id="txLabel">Transmitting Acoustic Nonce…</span>
-          </span>
-          <span class="mono" style="font-size: var(--fs-tiny); color: var(--dim); font-weight: 700;" id="txProtoLabel">18–20 kHz</span>
-        </div>
-        <canvas id="txCanvas" style="width: 100%; height: 42px; border-radius: 6px; background: #090d16; display: block;"></canvas>
-        <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--dim); font-family: 'JetBrains Mono', monospace; font-weight: 600; margin-top: 6px; padding: 0 2px;">
-          <span>0 kHz</span>
-          <span style="color: var(--accent);">Ultrasound Transmission Band</span>
-          <span>24 kHz</span>
-        </div>
+      <div style="margin-top: 18px; text-align: center;">
+        <button class="btn ghost" style="font-size: 13px; padding: 8px 14px;" onclick="showRecovery()">
+          <svg class="ic" style="width: 14px; height: 14px;"><use href="#i-mail"/></svg>
+          Sign in with Email Link instead
+        </button>
       </div>
-
-      <ul class="steps" id="steps" style="display:none">
-        <li id="st1">Getting a one-time code…</li>
-        <li id="st2">Sending it to your phone silently…</li>
-        <li id="st3">Waiting for your phone to confirm…</li>
-        <li id="st4">Signed in!</li>
-      </ul>
-      <div class="status" id="status"></div>
-
-      <button class="btn ghost" id="btnRetry" style="display:none" onclick="retransmit()">
-        <svg class="ic"><use href="#i-refresh"/></svg>
-        Send again
-      </button>
-
-      <div class="divider">Don't have your phone with you?</div>
-      <button class="btn ghost" onclick="showRecovery()">
-        <svg class="ic"><use href="#i-mail"/></svg>
-        Sign in with Magic Link
-      </button>
     </div>
 
-    <!-- ── Magic Link Recovery Card ── -->
-    <div class="card" id="recoveryCard" style="display:none">
-      <a class="brand center" href="home.html" aria-label="Echo home" style="margin-bottom: 28px; justify-content: center; display: flex;">
-        <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="word">echo</span>
-      </a>
-
-      <h2>
-        <svg class="ic" style="margin-right:6px"><use href="#i-mail"/></svg>
-        Magic Link Sign-in
-      </h2>
-
-      <div class="notice-box">
-        <svg class="ic" style="width:18px;height:18px;flex-shrink:0"><use href="#i-info"/></svg>
-        <div>
-          This is your <strong>backup option</strong> — use it when your phone isn't available. We'll send a time-limited sign-in link to your email.
+    <!-- ── State 2: Active Acoustic Handshake ── -->
+    <div class="card" id="handshakeState" style="display:none;">
+      <div class="brand-header">
+        <div class="radar-ring">
+          <div class="pulse-wave"></div>
+          <div class="pulse-wave"></div>
+          <div class="pulse-wave"></div>
+          <div class="radar-icon-center">
+            <svg class="ic" style="width: 20px; height: 20px;"><use href="#i-volume"/></svg>
+          </div>
         </div>
+        <h2 class="auth-title" id="handshakeTitle">Listening for Echo…</h2>
+        <p class="auth-sub" id="handshakeSub">Hold your phone near your computer</p>
       </div>
 
-      <label for="rUsernameOrEmail">
-        <svg class="ic" style="width:14px;height:14px;margin-right:4px;vertical-align:-2px"><use href="#i-user"/></svg>
-        Username or Email
-      </label>
-      <input type="text" id="rUsernameOrEmail" placeholder="your username or email" spellcheck="false"
-             onkeydown="if(event.key==='Enter')sendMagicLink()">
+      <!-- Match Code Display -->
+      <div class="match-card">
+        <div class="match-code-val" id="matchNum">--</div>
+        <div class="match-caption">Confirm this 2-digit code on your phone</div>
+      </div>
 
-      <div class="status" id="rStatus"></div>
+      <div class="status" id="handshakeStatus" style="margin: 0 0 16px; text-align: center;"></div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 10px;">
+        <button class="btn ghost" id="btnReplay" style="flex: 1; padding: 12px;" onclick="retransmit()">
+          <svg class="ic" style="width: 15px; height: 15px;"><use href="#i-refresh"/></svg>
+          Replay Sound
+        </button>
+        <button class="btn ghost" style="flex: 1; padding: 12px;" onclick="cancelLogin()">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <!-- ── State 3: Magic Link Recovery ── -->
+    <div class="card" id="recoveryCard" style="display:none">
+      <div class="brand-header">
+        <a class="brand" href="home.html" aria-label="Echo home">
+          <span class="wave anim"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="word" style="font-size: 22px;">echo</span>
+        </a>
+      </div>
+
+      <h2 class="auth-title" style="text-align: center;">Email Sign-in</h2>
+      <p class="auth-sub" style="margin-bottom: 20px;">We'll send a single-use sign-in link to your email</p>
+
+      <label for="rUsernameOrEmail" style="font-size: 13px; font-weight: 700;">Username or Email</label>
+      <input type="text" id="rUsernameOrEmail" placeholder="your username or email" spellcheck="false"
+             onkeydown="if(event.key==='Enter')sendMagicLink()" style="margin-bottom: 16px;">
+
+      <div class="status" id="rStatus" style="margin-bottom: 12px; display: none;"></div>
 
       <button class="btn" id="btnRecovery" onclick="sendMagicLink()">
         <svg class="ic"><use href="#i-mail"/></svg>
-        Send Magic Link
+        Send Sign-in Link
       </button>
-      <button class="btn ghost" style="margin-top:10px" onclick="hideRecovery()">
-        <svg class="ic"><use href="#i-volume"/></svg>
-        Back to sound sign-in
-      </button>
+
+      <div style="margin-top: 14px; text-align: center;">
+        <button class="btn ghost" style="font-size: 13px; padding: 8px 14px;" onclick="hideRecovery()">
+          Back to sound sign-in
+        </button>
+      </div>
     </div>
 
-    <div class="status" style="margin-bottom: 24px; margin-top: 18px;">
-      New here? <a class="text" href="signup.html">Create your account</a>
+    <!-- Bottom Account Link -->
+    <div class="auth-footer-links">
+      <span style="color: var(--muted);">New to Echo?</span>
+      <a class="text" href="signup.html" style="color: var(--accent); font-weight: 700;">Create an account</a>
     </div>
+
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
 let ggwave = null, context = null, instance = null;
-let session = null, ws = null, txCount = 0, txTimer = null, startedAt = 0;
-let txAnalyser = null, txAnimFrame = null;
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-function toggleNav(force) {
-  const links = $('navLinks');
-  const btn = $('navToggle');
-  const next = typeof force === 'boolean' ? force : !links.classList.contains('nav-open');
-  links.classList.toggle('nav-open', next);
-  btn.setAttribute('aria-expanded', String(next));
-}
-document.addEventListener('click', (e) => {
-  if (!$('mainNav').contains(e.target)) toggleNav(false);
-});
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleNav(false); });
+let session = null, ws = null, txTimer = null, startedAt = 0;
 
 if (typeof ggwave_factory !== 'undefined') {
   ggwave_factory().then(g => { ggwave = g; });
@@ -176,99 +268,83 @@ function convertTypedArray(src, type) {
   return new type(buffer);
 }
 
-const setStep = (n, cls) => { $('st' + n).className = cls; };
-
 async function matchCode(nonce) {
-  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nonce));
-  return String(10 + new Uint8Array(d)[0] % 90);
-}
-
-let txFreqData = null;
-
-function ensureTxCanvasDimensions(c) {
-  const dpr = window.devicePixelRatio || 1;
-  const targetW = Math.round(c.clientWidth * dpr);
-  const targetH = Math.round(c.clientHeight * dpr);
-  if (c.width !== targetW || c.height !== targetH) {
-    c.width = targetW;
-    c.height = targetH;
-  }
-}
-
-/* ── Live Acoustic Transmission Visualizer (60fps Optimized) ── */
-function drawTxVisualizer() {
-  if (!txAnalyser) return;
-  const c = $('txCanvas');
-  if (!c) return;
-  ensureTxCanvasDimensions(c);
-  const W = c.width, H = c.height, dpr = window.devicePixelRatio || 1;
-  const ctx = c.getContext('2d', { alpha: false });
-
-  // Fast clear
-  ctx.fillStyle = '#090d16';
-  ctx.fillRect(0, 0, W, H);
-
-  if (!txFreqData) txFreqData = new Uint8Array(txAnalyser.frequencyBinCount);
-  txAnalyser.getByteFrequencyData(txFreqData);
-
-  const bars = 36;
-  const bw = W / bars;
-  const maxF = (context ? context.sampleRate / 2 : 24000);
-  const ultraStart = 17500;
-
-  for (let i = 0; i < bars; i++) {
-    const bin = Math.floor((i / bars) * txFreqData.length);
-    const val = txFreqData[bin] / 255;
-    const f = (i / bars) * maxF;
-    const isUltra = f >= ultraStart;
-    const h = Math.max(2 * dpr, val * (H - 4 * dpr));
-
-    if (isUltra && val > 0.1) {
-      ctx.fillStyle = '#3b82f6';
-    } else if (isUltra) {
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
-    } else {
-      ctx.fillStyle = val > 0.08 ? '#64748b' : 'rgba(100, 116, 139, 0.2)';
-    }
-    ctx.fillRect(i * bw + 1, H - h, Math.max(bw - 2 * dpr, 1), h);
-  }
-
-  txAnimFrame = requestAnimationFrame(drawTxVisualizer);
+  const enc = new TextEncoder().encode(nonce);
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', enc));
+  return String((hash[0] % 90) + 10);
 }
 
 async function startLogin() {
   const username = $('username').value.trim();
-  if (!username) { $('status').textContent = 'Please enter your username first'; return; }
-  if (!ggwave) { $('status').textContent = 'Sound module is still loading — please wait a moment and try again'; return; }
+  const formStatus = $('formStatus');
+  formStatus.style.display = 'none';
+
+  if (!username) {
+    formStatus.className = 'status bad';
+    formStatus.textContent = 'Please enter your username first';
+    formStatus.style.display = 'block';
+    return;
+  }
+  if (!ggwave) {
+    formStatus.className = 'status';
+    formStatus.textContent = 'Sound engine is initializing… please wait a moment';
+    formStatus.style.display = 'block';
+    return;
+  }
+
   ensureAudio();
   startedAt = Date.now();
-  $('btnLogin').disabled = true;
-  $('steps').style.display = '';
-  ['st1','st2','st3','st4'].forEach(id => $(id).className = '');
-  $('status').className = 'status'; $('status').textContent = '';
-  setStep(1, 'active');
+  $('btnContinue').disabled = true;
 
   let r;
   try {
     r = await fetch('/api/login/start', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username })
     });
-  } catch { return fail('Cannot reach the server — make sure it is running'); }
+  } catch {
+    $('btnContinue').disabled = false;
+    formStatus.className = 'status bad';
+    formStatus.textContent = 'Cannot reach the server — check connection';
+    formStatus.style.display = 'block';
+    return;
+  }
 
   if (!r.ok) {
+    $('btnContinue').disabled = false;
     const err = (await r.json().catch(() => ({}))).error || r.status;
-    return fail(err === 'unknown user or no enrolled device'
-      ? 'No account found for that username — please create one first'
-      : 'Could not start sign-in: ' + err);
+    formStatus.className = 'status bad';
+    formStatus.textContent = err === 'unknown user or no enrolled device'
+      ? 'No account found for that username. Please register first.'
+      : 'Sign-in error: ' + err;
+    formStatus.style.display = 'block';
+    return;
   }
 
   session = await r.json();
   session.match = await matchCode(session.nonce);
-  setStep(1, 'done');
+
+  // Transition to clean Handshake state
+  $('formState').style.display = 'none';
+  $('handshakeState').style.display = 'block';
+  $('matchNum').textContent = session.match;
+  $('handshakeTitle').textContent = 'Listening for Echo…';
+  $('handshakeSub').textContent = 'Hold your phone near your computer';
+  $('handshakeStatus').textContent = '';
+  $('handshakeStatus').className = 'status';
+
   openSocket();
-  txCount = 0;
   transmitNonce();
+}
+
+function cancelLogin() {
+  clearTimeout(txTimer);
+  if (ws) { ws.close(); ws = null; }
+  session = null;
+  $('btnContinue').disabled = false;
+  $('handshakeState').style.display = 'none';
+  $('formState').style.display = 'block';
 }
 
 function openSocket() {
@@ -278,17 +354,20 @@ function openSocket() {
     const msg = JSON.parse(ev.data);
     if (msg.type === 'authenticated') {
       clearTimeout(txTimer);
-      setStep(3, 'done');
       const r = await fetch('/api/session/claim', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.sessionId, claimToken: msg.claimToken })
       });
       if (r.ok) {
-        setStep(4, 'done');
-        $('status').className = 'status ok';
-        $('status').textContent = 'Signed in — taking you to your dashboard…';
-        setTimeout(() => location.href = 'dashboard.html', 800);
-      } else fail('Could not complete sign-in. Please try again.');
+        $('handshakeTitle').textContent = '✓ Approved!';
+        $('handshakeSub').textContent = 'Session verified successfully';
+        $('handshakeStatus').className = 'status ok';
+        $('handshakeStatus').textContent = 'Signed in — opening dashboard…';
+        setTimeout(() => location.href = 'dashboard.html', 700);
+      } else {
+        fail('Could not complete sign-in. Please try again.');
+      }
     }
   };
   ws.onerror = () => {};
@@ -296,61 +375,32 @@ function openSocket() {
 
 function transmitNonce() {
   if (!session) return;
-  txCount++;
-  setStep(2, 'active');
 
-  $('txVisualizerContainer').style.display = 'block';
-  $('txLabel').textContent = 'Transmitting Acoustic Nonce…';
-  $('txWaveAnim').style.display = 'inline-flex';
-  const proto = $('proto').value;
-  $('txProtoLabel').textContent = proto.startsWith('ULTRA') ? '18–20 kHz' : 'Audible';
+  $('handshakeTitle').textContent = 'Transmitting sound…';
+  $('handshakeSub').textContent = 'Playing ultrasonic handshake';
 
-  const protoName = 'GGWAVE_PROTOCOL_' + proto;
-  const waveform  = ggwave.encode(instance, 'E1:' + session.nonce, ggwave.ProtocolId[protoName], 25);
+  // Default to ULTRASOUND_NORMAL (18–20 kHz)
+  const waveform = ggwave.encode(instance, 'E1:' + session.nonce, ggwave.ProtocolId.GGWAVE_PROTOCOL_ULTRASOUND_NORMAL, 25);
   const f32 = convertTypedArray(waveform, Float32Array);
   const buf = context.createBuffer(1, f32.length, context.sampleRate);
   buf.getChannelData(0).set(f32);
 
   const src = context.createBufferSource();
   src.buffer = buf;
-
-  // Live analyser tap
-  txAnalyser = context.createAnalyser();
-  txAnalyser.fftSize = 256;
-  txAnalyser.smoothingTimeConstant = 0.2;
-  src.connect(txAnalyser);
-  txAnalyser.connect(context.destination);
-
-  drawTxVisualizer();
+  src.connect(context.destination);
 
   src.onended = () => {
-    if (txAnimFrame) {
-      cancelAnimationFrame(txAnimFrame);
-      txAnimFrame = null;
-    }
-    if (txAnalyser) {
-      try { txAnalyser.disconnect(); } catch {}
-      txAnalyser = null;
-    }
+    $('handshakeTitle').textContent = 'Awaiting Confirmation';
+    $('handshakeSub').textContent = 'Tap Approve on your phone to sign in';
+    $('handshakeStatus').textContent = '';
 
-    setStep(2, 'done');
-    setStep(3, 'active');
-    $('txLabel').textContent = '✓ Nonce Transmitted to Phone';
-    $('txWaveAnim').style.display = 'none';
-
-    $('status').className = 'status';
-    $('status').textContent = 'Check your phone — it should show the number ' + session.match + '. If it matches, tap Approve.';
-    $('btnRetry').style.display = '';
-
-    // Single session expiry timeout (retransmission is manual via "Send again")
     clearTimeout(txTimer);
-    const remainingTime = Math.max(3000, session.ttlMs - (Date.now() - startedAt));
+    const remainingTime = Math.max(5000, session.ttlMs - (Date.now() - startedAt));
     txTimer = setTimeout(() => {
-      if ($('st3').className === 'active') {
-        fail('Session expired. Tap "Send again" or enter your username to restart.');
-      }
+      fail('Session timed out. Tap "Replay Sound" or cancel to try again.');
     }, remainingTime);
   };
+
   src.start(0);
 }
 
@@ -363,60 +413,60 @@ function retransmit() {
 
 function fail(msg) {
   clearTimeout(txTimer);
-  if (txAnimFrame) {
-    cancelAnimationFrame(txAnimFrame);
-    txAnimFrame = null;
-  }
-  if (txAnalyser) {
-    try { txAnalyser.disconnect(); } catch {}
-    txAnalyser = null;
-  }
-  ['st1','st2','st3'].forEach(id => { if ($(id).className === 'active') $(id).className = 'fail'; });
-  $('status').className = 'status bad';
-  $('status').textContent = msg;
-  $('btnLogin').disabled = false;
-  $('btnRetry').style.display = 'none';
-  if (ws) { ws.close(); ws = null; }
-  session = null;
+  $('handshakeStatus').className = 'status bad';
+  $('handshakeStatus').textContent = msg;
 }
 
-/* ── recovery fallback ── */
 function showRecovery() {
-  $('soundCard').style.display = 'none';
-  $('recoveryCard').style.display = '';
-  $('rUsernameOrEmail').value = $('username').value;
+  $('formState').style.display = 'none';
+  $('handshakeState').style.display = 'none';
+  $('recoveryCard').style.display = 'block';
+  $('rUsernameOrEmail').focus();
 }
+
 function hideRecovery() {
   $('recoveryCard').style.display = 'none';
-  $('soundCard').style.display = '';
+  $('formState').style.display = 'block';
 }
 
 async function sendMagicLink() {
-  const usernameOrEmail = $('rUsernameOrEmail').value.trim();
-  if (!usernameOrEmail) {
-    $('rStatus').className = 'status bad';
-    $('rStatus').textContent = 'Please enter your username or email address';
+  const val = $('rUsernameOrEmail').value.trim();
+  const st = $('rStatus');
+  st.style.display = 'none';
+
+  if (!val) {
+    st.className = 'status bad';
+    st.textContent = 'Please enter your username or email';
+    st.style.display = 'block';
     return;
   }
+
   $('btnRecovery').disabled = true;
-  $('rStatus').className = 'status ok';
-  $('rStatus').textContent = 'Sending magic link...';
-  const r = await fetch('/api/login/magic-request', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ usernameOrEmail })
-  }).catch(() => null);
-  if (r && r.ok) {
-    $('rStatus').className = 'status ok';
-    $('rStatus').textContent = 'Magic link sent! Please check your email inbox.';
-  } else {
-    const err = r ? (await r.json().catch(() => ({}))).error : 'Cannot reach the server';
-    $('rStatus').className = 'status bad';
-    $('rStatus').textContent = err || 'Failed to send magic link.';
+  st.className = 'status';
+  st.textContent = 'Sending sign-in link…';
+  st.style.display = 'block';
+
+  try {
+    const r = await fetch('/api/recovery/send-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernameOrEmail: val })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      st.className = 'status ok';
+      st.textContent = 'Link sent! Check your inbox.';
+    } else {
+      st.className = 'status bad';
+      st.textContent = data.error || 'Failed to send magic link';
+    }
+  } catch {
+    st.className = 'status bad';
+    st.textContent = 'Cannot reach server';
+  } finally {
     $('btnRecovery').disabled = false;
   }
 }
-
-fetch('/api/me').then(r => { if (r.ok) location.href = 'dashboard.html'; });
 </script>
 </body>
 </html>
