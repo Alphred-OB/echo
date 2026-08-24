@@ -136,12 +136,10 @@
       <label for="username" style="font-size: 13px; font-weight: 700;">Username</label>
       <input type="text" id="username" placeholder="e.g. kwame" autocomplete="off" spellcheck="false" autofocus
              onkeydown="if(event.key==='Enter')document.getElementById('email').focus()" style="margin-bottom: 14px;">
-      <div class="hint" id="userHint" style="margin-top: -8px; margin-bottom: 12px;"></div>
 
       <label for="email" style="font-size: 13px; font-weight: 700;">Email Address</label>
       <input type="email" id="email" placeholder="e.g. kwame@example.com" autocomplete="off" spellcheck="false"
              onkeydown="if(event.key==='Enter')signup()" style="margin-bottom: 18px;">
-      <div class="hint" id="emailHint" style="margin-top: -12px; margin-bottom: 12px;"></div>
 
       <div class="status" id="formStatus" style="margin-bottom: 14px; display: none;"></div>
 
@@ -226,7 +224,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-let enrollUrl = '', enrollToken = '', eventSource = null;
+let enrollUrl = '', enrollToken = '', pollTimer = null;
 
 async function signup() {
   const username = $('username').value.trim();
@@ -250,7 +248,7 @@ async function signup() {
   $('btnNext').disabled = true;
 
   try {
-    const r = await fetch('/api/signup/start', {
+    const r = await fetch('/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email })
@@ -282,32 +280,35 @@ async function signup() {
     $('step1').style.display = 'none';
     $('step2').style.display = 'block';
 
-    listenForEnrollment();
+    startPollingStatus();
   } catch {
     $('btnNext').disabled = false;
     formStatus.className = 'status bad';
-    formStatus.textContent = 'Network error — check connection';
+    formStatus.textContent = 'Network error — check server connection';
     formStatus.style.display = 'block';
   }
 }
 
-function listenForEnrollment() {
-  if (eventSource) eventSource.close();
-  eventSource = new EventSource(`/api/enroll/events?token=${enrollToken}`);
-
-  eventSource.onmessage = (e) => {
+function startPollingStatus() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
     try {
-      const data = JSON.parse(e.data);
-      if (data.type === 'enrolled') {
-        eventSource.close();
-        $('doneName').textContent = $('username').value.trim();
-        $('step2').style.display = 'none';
-        $('step3').style.display = 'block';
+      const res = await fetch(`/api/signup/status?token=${encodeURIComponent(enrollToken)}`);
+      if (res.ok) {
+        const status = await res.json();
+        if (status.enrolled) {
+          clearInterval(pollTimer);
+          $('doneName').textContent = $('username').value.trim();
+          $('step2').style.display = 'none';
+          $('step3').style.display = 'block';
+        } else if (status.expired) {
+          clearInterval(pollTimer);
+          alert('Pairing token expired. Please try again.');
+          backToStep1();
+        }
       }
     } catch {}
-  };
-
-  eventSource.onerror = () => {};
+  }, 1000);
 }
 
 function copyEnrollLink() {
@@ -320,7 +321,7 @@ function copyEnrollLink() {
 }
 
 function backToStep1() {
-  if (eventSource) eventSource.close();
+  clearInterval(pollTimer);
   $('step2').style.display = 'none';
   $('step1').style.display = 'block';
   $('btnNext').disabled = false;
