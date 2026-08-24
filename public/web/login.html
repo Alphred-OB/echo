@@ -37,6 +37,7 @@
   letter-spacing: -0.5px;
   margin: 0 0 6px;
   color: var(--fg);
+  transition: all 0.3s ease;
 }
 
 .auth-sub {
@@ -44,6 +45,7 @@
   color: var(--muted);
   margin: 0;
   text-align: center;
+  transition: all 0.3s ease;
 }
 
 /* Match Code Card */
@@ -51,13 +53,23 @@
   margin: 20px 0;
   padding: 24px 16px;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--r-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   box-shadow: 0 8px 30px -10px rgba(0, 0, 0, 0.05);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.match-card.connected {
+  border-color: var(--ok);
+  background: rgba(16, 185, 129, 0.04);
+  box-shadow: 0 12px 35px -5px rgba(16, 185, 129, 0.25);
+  transform: scale(1.03);
 }
 
 .match-code-val {
@@ -68,19 +80,31 @@
   color: var(--accent);
   line-height: 1;
   margin-bottom: 8px;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.match-card.connected .match-code-val {
+  color: var(--ok);
+  transform: scale(1.08);
 }
 
 .match-caption {
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
+  transition: color 0.3s ease;
 }
 
-/* Radar & Pulse */
+.match-card.connected .match-caption {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+/* Radar & Ultrasonic Shockwave Animation */
 .radar-ring {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   margin: 0 auto 16px;
   display: flex;
   align-items: center;
@@ -110,8 +134,8 @@
 }
 
 .radar-icon-center {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   background: var(--accent);
   border-radius: 50%;
   display: flex;
@@ -120,7 +144,73 @@
   color: #ffffff;
   box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
   z-index: 2;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* ── Connection Bloom & Shockwave ── */
+.radar-ring.connected .radar-icon-center {
+  background: var(--ok);
+  transform: scale(1.18);
+  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+}
+
+.radar-ring.connected .pulse-wave {
+  animation: none;
+  opacity: 0;
+}
+
+.shockwave {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 3px solid var(--ok);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.radar-ring.connected .shockwave {
+  animation: shockwave-expand 0.9s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes shockwave-expand {
+  0% { transform: scale(0.4); opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Sparkle Particles */
+.particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: none;
+}
+
+.radar-ring.connected .particles {
+  display: block;
+}
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  top: 50%;
+  left: 50%;
+  opacity: 0;
+}
+
+.radar-ring.connected .particle:nth-child(1) { animation: spark-1 0.7s ease-out forwards; }
+.radar-ring.connected .particle:nth-child(2) { animation: spark-2 0.7s ease-out forwards; }
+.radar-ring.connected .particle:nth-child(3) { animation: spark-3 0.7s ease-out forwards; }
+.radar-ring.connected .particle:nth-child(4) { animation: spark-4 0.7s ease-out forwards; }
+
+@keyframes spark-1 { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-42px, -38px) scale(0); opacity: 0; } }
+@keyframes spark-2 { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(40px, -36px) scale(0); opacity: 0; } }
+@keyframes spark-3 { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-38px, 40px) scale(0); opacity: 0; } }
+@keyframes spark-4 { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(42px, 38px) scale(0); opacity: 0; } }
 
 .auth-footer-links {
   display: flex;
@@ -171,12 +261,19 @@
     <!-- ── State 2: Active Acoustic Handshake ── -->
     <div class="card" id="handshakeState" style="display:none;">
       <div class="brand-header">
-        <div class="radar-ring">
+        <div class="radar-ring" id="radarRing">
           <div class="pulse-wave"></div>
           <div class="pulse-wave"></div>
           <div class="pulse-wave"></div>
-          <div class="radar-icon-center">
-            <svg class="ic" style="width: 20px; height: 20px;"><use href="#i-volume"/></svg>
+          <div class="shockwave"></div>
+          <div class="particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+          </div>
+          <div class="radar-icon-center" id="radarIcon">
+            <svg class="ic" id="radarSvg" style="width: 22px; height: 22px;"><use href="#i-volume"/></svg>
           </div>
         </div>
         <h2 class="auth-title" id="handshakeTitle">Listening for Echo…</h2>
@@ -184,15 +281,15 @@
       </div>
 
       <!-- Match Code Display -->
-      <div class="match-card">
+      <div class="match-card" id="matchCard">
         <div class="match-code-val" id="matchNum">--</div>
-        <div class="match-caption">Confirm this 2-digit code on your phone</div>
+        <div class="match-caption" id="matchCaption">Confirm this 2-digit code on your phone</div>
       </div>
 
       <div class="status" id="handshakeStatus" style="margin: 0 0 16px; text-align: center;"></div>
 
       <!-- Action Buttons -->
-      <div style="display: flex; gap: 10px;">
+      <div id="handshakeActions" style="display: flex; gap: 10px;">
         <button class="btn ghost" id="btnReplay" style="flex: 1; padding: 12px;" onclick="retransmit()">
           <svg class="ic" style="width: 15px; height: 15px;"><use href="#i-refresh"/></svg>
           Replay Sound
@@ -329,10 +426,15 @@ async function startLogin() {
   $('formState').style.display = 'none';
   $('handshakeState').style.display = 'block';
   $('matchNum').textContent = session.match;
+  $('matchCard').classList.remove('connected');
+  $('radarRing').classList.remove('connected');
+  $('radarSvg').innerHTML = '<use href="#i-volume"/>';
+  $('matchCaption').textContent = 'Confirm this 2-digit code on your phone';
   $('handshakeTitle').textContent = 'Listening for Echo…';
   $('handshakeSub').textContent = 'Hold your phone near your computer';
   $('handshakeStatus').textContent = '';
   $('handshakeStatus').className = 'status';
+  $('handshakeActions').style.display = 'flex';
 
   openSocket();
   transmitNonce();
@@ -360,11 +462,16 @@ function openSocket() {
         body: JSON.stringify({ sessionId: session.sessionId, claimToken: msg.claimToken })
       });
       if (r.ok) {
-        $('handshakeTitle').textContent = '✓ Approved!';
-        $('handshakeSub').textContent = 'Session verified successfully';
-        $('handshakeStatus').className = 'status ok';
-        $('handshakeStatus').textContent = 'Signed in — opening dashboard…';
-        setTimeout(() => location.href = 'dashboard.html', 700);
+        // Trigger Cool Connection Bloom & Shockwave Animation
+        $('radarRing').classList.add('connected');
+        $('matchCard').classList.add('connected');
+        $('radarSvg').innerHTML = '<use href="#i-check"/>';
+        $('matchCaption').textContent = `✓ Code ${session.match} Verified`;
+        $('handshakeTitle').textContent = 'Device Connected!';
+        $('handshakeSub').textContent = 'Signature confirmed · Opening dashboard…';
+        $('handshakeActions').style.display = 'none';
+
+        setTimeout(() => location.href = 'dashboard.html', 1100);
       } else {
         fail('Could not complete sign-in. Please try again.');
       }
@@ -390,14 +497,17 @@ function transmitNonce() {
   src.connect(context.destination);
 
   src.onended = () => {
-    $('handshakeTitle').textContent = 'Awaiting Confirmation';
+    if ($('radarRing').classList.contains('connected')) return;
+    $('handshakeTitle').textContent = 'Awaiting Approval';
     $('handshakeSub').textContent = 'Tap Approve on your phone to sign in';
     $('handshakeStatus').textContent = '';
 
     clearTimeout(txTimer);
     const remainingTime = Math.max(5000, session.ttlMs - (Date.now() - startedAt));
     txTimer = setTimeout(() => {
-      fail('Session timed out. Tap "Replay Sound" or cancel to try again.');
+      if (!$('radarRing').classList.contains('connected')) {
+        fail('Session timed out. Tap "Replay Sound" or cancel to try again.');
+      }
     }, remainingTime);
   };
 

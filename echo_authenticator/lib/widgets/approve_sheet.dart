@@ -153,23 +153,40 @@ class _ApproveSheetState extends State<ApproveSheet> with SingleTickerProviderSt
             const SizedBox(height: 20),
 
             if (_isSuccess) ...[
-              // ── Success State ──
-              Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                  color: EchoTheme.okSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(Icons.check_circle_rounded, color: EchoTheme.ok, size: 40),
-                ),
+              // ── Spring Connection Celebration State ──
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.2, end: 1.0),
+                duration: const Duration(milliseconds: 550),
+                curve: const Cubic(0.34, 1.56, 0.64, 1.0),
+                builder: (context, scale, child) {
+                  return Transform.scale(
+                    scale: scale,
+                    child: Container(
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        color: EchoTheme.okSoft,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: EchoTheme.ok.withValues(alpha: 0.35),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.check_circle_rounded, color: EchoTheme.ok, size: 44),
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
               const Text(
-                'Session Transferred',
+                'Connected & Signed',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 21,
                   fontWeight: FontWeight.w800,
                   color: EchoTheme.ok,
                 ),
