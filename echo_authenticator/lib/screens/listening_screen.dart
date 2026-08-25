@@ -47,11 +47,12 @@ class _ListeningScreenState extends State<ListeningScreen>
 
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat();
+      duration: const Duration(milliseconds: 2400),
+    )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.12).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _pulseAnimation = CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOutSine,
     );
 
     _startListeningAuto();
@@ -271,93 +272,113 @@ class _ListeningScreenState extends State<ListeningScreen>
 
               const Spacer(flex: 1),
 
-              // ── Interactive Central Acoustic Pulse Core ──
-              GestureDetector(
-                onTapDown: (_) {
-                  setState(() => _isButtonPressed = true);
-                  HapticFeedback.lightImpact();
-                },
-                onTapUp: (_) {
-                  setState(() => _isButtonPressed = false);
-                  _toggleListen();
-                },
-                onTapCancel: () {
-                  setState(() => _isButtonPressed = false);
-                },
-                child: AnimatedScale(
-                  scale: _isButtonPressed ? 0.92 : 1.0,
-                  duration: const Duration(milliseconds: 140),
-                  curve: Curves.easeOutCubic,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Ambient Breathing Pulse Ring
-                      if (_isListening)
-                        AnimatedBuilder(
-                          animation: _pulseAnimation,
-                          builder: (context, child) {
-                            return Container(
-                              width: 190 * _pulseAnimation.value,
-                              height: 190 * _pulseAnimation.value,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: (_hasUltrasound
-                                        ? EchoTheme.accent
-                                        : EchoTheme.accent)
-                                    .withValues(
-                                        alpha: _hasUltrasound ? 0.22 : 0.06),
-                              ),
-                            );
-                          },
-                        ),
-
-                      // Outer Static Ring
-                      Container(
-                        width: 160,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _isListening
-                              ? (_hasUltrasound
-                                  ? EchoTheme.accent.withValues(alpha: 0.15)
-                                  : EchoTheme.accentSoft)
-                              : const Color(0xFFF1F5F9),
-                          border: Border.all(
-                            color: _isListening
-                                ? (_hasUltrasound
-                                    ? EchoTheme.accent
-                                    : EchoTheme.accent.withValues(alpha: 0.25))
-                                : const Color(0xFFE2E8F0),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-
-                      // Core Button Center
-                      Container(
-                        width: 104,
-                        height: 104,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _isListening ? EchoTheme.accent : const Color(0xFF64748B),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (_isListening ? EchoTheme.accent : const Color(0xFF64748B))
-                                  .withValues(alpha: 0.35),
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
+              // ── Interactive Central Acoustic Pulse Core (Fixed 220x220 Frame) ──
+              SizedBox(
+                width: 220,
+                height: 220,
+                child: Center(
+                  child: GestureDetector(
+                    onTapDown: (_) {
+                      setState(() => _isButtonPressed = true);
+                      HapticFeedback.lightImpact();
+                    },
+                    onTapUp: (_) {
+                      setState(() => _isButtonPressed = false);
+                      _toggleListen();
+                    },
+                    onTapCancel: () {
+                      setState(() => _isButtonPressed = false);
+                    },
+                    child: AnimatedScale(
+                      scale: _isButtonPressed ? 0.92 : 1.0,
+                      duration: const Duration(milliseconds: 140),
+                      curve: Curves.easeOutCubic,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Harmonic Breathing Pulse Rings (Continuous Physics)
+                          if (_isListening)
+                            AnimatedBuilder(
+                              animation: _pulseAnimation,
+                              builder: (context, child) {
+                                final v = _pulseAnimation.value;
+                                return Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Outer Soft Expanding Halo
+                                    Container(
+                                      width: 170 + 38 * v,
+                                      height: 170 + 38 * v,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: (_hasUltrasound ? EchoTheme.accent : EchoTheme.accent)
+                                            .withValues(alpha: _hasUltrasound ? 0.25 : 0.03 + 0.05 * v),
+                                      ),
+                                    ),
+                                    // Middle Focused Harmonic Wave
+                                    Container(
+                                      width: 144 + 18 * v,
+                                      height: 144 + 18 * v,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: (_hasUltrasound ? EchoTheme.accent : EchoTheme.accent)
+                                            .withValues(alpha: _hasUltrasound ? 0.35 : 0.06 + 0.06 * v),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Icon(
-                            _isListening ? Icons.mic_rounded : Icons.mic_off_rounded,
-                            color: Colors.white,
-                            size: 44,
+
+                          // Outer Static Ring
+                          Container(
+                            width: 156,
+                            height: 156,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _isListening
+                                  ? (_hasUltrasound
+                                      ? EchoTheme.accent.withValues(alpha: 0.15)
+                                      : EchoTheme.accentSoft)
+                                  : const Color(0xFFF1F5F9),
+                              border: Border.all(
+                                color: _isListening
+                                    ? (_hasUltrasound
+                                        ? EchoTheme.accent
+                                        : EchoTheme.accent.withValues(alpha: 0.25))
+                                    : const Color(0xFFE2E8F0),
+                                width: 2,
+                              ),
+                            ),
                           ),
-                        ),
+
+                          // Core Button Center
+                          Container(
+                            width: 104,
+                            height: 104,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _isListening ? EchoTheme.accent : const Color(0xFF64748B),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (_isListening ? EchoTheme.accent : const Color(0xFF64748B))
+                                      .withValues(alpha: 0.35),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Icon(
+                                _isListening ? Icons.mic_rounded : Icons.mic_off_rounded,
+                                color: Colors.white,
+                                size: 44,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

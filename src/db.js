@@ -111,6 +111,11 @@ try {
 } catch (e) {
   // Column already exists
 }
+try {
+  db.exec('ALTER TABLE enroll_tokens ADD COLUMN code TEXT');
+} catch (e) {
+  // Column already exists
+}
 
 const now = () => Date.now();
 const rand = (bytes) => crypto.randomBytes(bytes).toString('base64url');

@@ -18,97 +18,48 @@ class LiveSpectrumWidget extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF06090F) : const Color(0xFF090D16),
-        borderRadius: BorderRadius.circular(EchoTheme.rMd),
+        color: isDark ? EchoTheme.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: hasUltrasound
               ? EchoTheme.accent
-              : (isDark ? EchoTheme.borderDark : EchoTheme.borderStrongLight),
-          width: hasUltrasound ? 2 : 1,
+              : (isDark ? EchoTheme.borderDark : const Color(0xFFE2E8F0)),
+          width: hasUltrasound ? 1.5 : 1.0,
         ),
-        boxShadow: hasUltrasound
-            ? [
-                BoxShadow(
-                  color: EchoTheme.accent.withValues(alpha: 0.35),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                )
-              ]
-            : null,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Canvas spectrum
-          SizedBox(
-            height: 52,
-            width: double.infinity,
-            child: CustomPaint(
-              painter: _SpectrumPainter(
-                bins: bins,
-                isListening: isListening,
-                hasUltrasound: hasUltrasound,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Frequency scale markers
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '0 kHz',
-                style: TextStyle(
-                  fontFamily: 'JetBrains Mono',
-                  fontSize: 10,
-                  color: EchoTheme.dimLight,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: hasUltrasound
-                      ? EchoTheme.accent
-                      : EchoTheme.accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '18–20 kHz Ultrasound',
-                  style: TextStyle(
-                    fontFamily: 'JetBrains Mono',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: hasUltrasound ? Colors.white : EchoTheme.accent,
-                  ),
-                ),
-              ),
-              const Text(
-                '24 kHz',
-                style: TextStyle(
-                  fontFamily: 'JetBrains Mono',
-                  fontSize: 10,
-                  color: EchoTheme.dimLight,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: hasUltrasound
+                ? EchoTheme.accent.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: SizedBox(
+        height: 38,
+        width: double.infinity,
+        child: CustomPaint(
+          painter: _CleanSpectrumPainter(
+            bins: bins,
+            isListening: isListening,
+            hasUltrasound: hasUltrasound,
+          ),
+        ),
       ),
     );
   }
 }
 
-class _SpectrumPainter extends CustomPainter {
+class _CleanSpectrumPainter extends CustomPainter {
   final List<double> bins;
   final bool isListening;
   final bool hasUltrasound;
 
-  _SpectrumPainter({
+  _CleanSpectrumPainter({
     required this.bins,
     required this.isListening,
     required this.hasUltrasound,
@@ -120,34 +71,34 @@ class _SpectrumPainter extends CustomPainter {
 
     final barCount = bins.length;
     final totalBarWidth = size.width / barCount;
-    final barSpacing = 2.0;
-    final barWidth = (totalBarWidth - barSpacing).clamp(1.0, 12.0);
+    const barSpacing = 2.5;
+    final barWidth = (totalBarWidth - barSpacing).clamp(2.0, 8.0);
 
-    final bgPaint = Paint()..color = const Color(0x3364748B);
-    final slatePaint = Paint()..color = const Color(0xFF64748B);
+    final idlePaint = Paint()..color = const Color(0xFFF1F5F9);
+    final ambientPaint = Paint()..color = const Color(0xFFCBD5E1);
     final accentPaint = Paint()..color = EchoTheme.accent;
-    final accentDimPaint = Paint()..color = EchoTheme.accent.withValues(alpha: 0.45);
+    final accentSoftPaint = Paint()..color = EchoTheme.accent.withValues(alpha: 0.35);
 
     for (int i = 0; i < barCount; i++) {
       final x = i * totalBarWidth + (barSpacing / 2);
-      final rawVal = bins[i].clamp(0.02, 1.0);
-      final h = rawVal * size.height;
+      final rawVal = bins[i].clamp(0.04, 1.0);
+      final h = (rawVal * size.height).clamp(3.0, size.height);
       final y = size.height - h;
 
-      final isUltrasoundBin = (i >= (barCount * 0.72) && i <= (barCount * 0.90));
+      final isUltrasoundBin = (i >= (barCount * 0.70) && i <= (barCount * 0.92));
 
       Paint paint;
       if (!isListening) {
-        paint = bgPaint;
+        paint = idlePaint;
       } else if (isUltrasoundBin) {
-        paint = (rawVal > 0.25 || hasUltrasound) ? accentPaint : accentDimPaint;
+        paint = (rawVal > 0.22 || hasUltrasound) ? accentPaint : accentSoftPaint;
       } else {
-        paint = (rawVal > 0.08) ? slatePaint : bgPaint;
+        paint = (rawVal > 0.08) ? ambientPaint : idlePaint;
       }
 
       final rect = RRect.fromRectAndRadius(
         Rect.fromLTWH(x, y, barWidth, h),
-        const Radius.circular(1.5),
+        const Radius.circular(3),
       );
 
       canvas.drawRRect(rect, paint);
@@ -155,7 +106,7 @@ class _SpectrumPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SpectrumPainter oldDelegate) {
+  bool shouldRepaint(covariant _CleanSpectrumPainter oldDelegate) {
     return true;
   }
 }

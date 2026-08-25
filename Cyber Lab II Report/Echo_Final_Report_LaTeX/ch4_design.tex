@@ -1,0 +1,285 @@
+\chapter{Design, Testing and Evaluation}
+\label{ch:design}
+
+\section{Server Design}
+
+The server is split into three files, and each one has a single job:
+\texttt{db.js} handles the database and the security helper functions;
+\texttt{server.js} defines the web app and every API route; and
+\texttt{websocket.js} handles the live connection and the function that
+tells a waiting laptop that its login was approved. Splitting the code
+this way keeps each file easy to read on its own, rather than having one
+huge file that does everything.
+
+\subsection{Database Layout}
+
+Table~\ref{tab:schema} lists the seven tables that make up Echo's
+database. Two of them, \texttt{login\_\allowbreak sessions} and \texttt{enroll\_\allowbreak tokens},
+are cleaned up the most carefully: both have an expiry time and a used
+flag, and a background task (Section~\ref{sec:architecture}) deletes
+expired, unused rows every 60 seconds so the database does not fill up
+with old, useless data over time.
+
+\begin{table}[htbp]
+\centering
+\caption{The database tables}
+\label{tab:schema}
+\begin{tabular}{|L{3cm}|L{9.5cm}|}
+\hline
+\textbf{Table} & \textbf{What it stores} \\
+\hline
+\texttt{users} & Username, an optional password hash (kept for older accounts), optional email, when the account was created \\
+\hline
+\texttt{devices} & One row per registered phone: which user owns it, its name, and its public key \\
+\hline
+\texttt{login\_sessions} & One row per login attempt: the one-time code, its status, a one-time claim token, when it expires, whether it has been used \\
+\hline
+\texttt{sessions} & Logged-in session tokens (the cookie value), with an expiry time \\
+\hline
+\texttt{enroll\_tokens} & One-time sign-up codes, tied to a username, with an expiry time and a used flag \\
+\hline
+\texttt{recovery\_codes} & Scrambled (hashed) versions of one-time recovery codes, from the older recovery method \\
+\hline
+\texttt{logins} & A running log of every login attempt: user, method used, phone, whether it worked, and when \\
+\hline
+\texttt{magic\_tokens} & One-time email recovery links, with an expiry time and a used flag \\
+\hline
+\end{tabular}
+\end{table}
+
+Where a password hash is stored at all, it is scrambled using a standard,
+slow method called PBKDF2, with a random 256-bit salt and 310{,}000
+rounds, following the current minimum recommended by NIST (the body that
+sets US security standards) for this method. Checking a password always
+runs the full scrambling process and compares the result carefully, rather
+than stopping early, so that the time it takes cannot leak any hints about
+whether a guess was close. Recovery codes and email links are likewise
+never stored as plain, readable text.
+
+\subsection{The API}
+
+The server offers a set of web addresses (an API) under \texttt{/api},
+plus one live WebSocket connection. Table~\ref{tab:api} lists them all;
+the full details of what each one expects and returns are in
+Appendix~\ref{app:api}.
+
+\begin{table}[htbp]
+\centering
+\caption{The API, in brief}
+\label{tab:api}
+\begin{tabular}{|L{4.9cm}|L{7.6cm}|}
+\hline
+\textbf{Address} & \textbf{What it does} \\
+\hline
+\texttt{POST /api/\allowbreak signup} & Claim a username, get back a one-time sign-up code \\
+\hline
+\texttt{POST /api/\allowbreak enroll} & Use that code to register a phone's public key \\
+\hline
+\texttt{GET /api/\allowbreak signup/\allowbreak status} & Check whether sign-up has finished yet \\
+\hline
+\texttt{POST /api/\allowbreak login/\allowbreak start} & Create a one-time login code to play as sound \\
+\hline
+\texttt{GET /api/\allowbreak login/\allowbreak check} & The phone's quiet check that a code belongs to its own account \\
+\hline
+\texttt{POST /api/\allowbreak login/\allowbreak verify} & Send the phone's signature; approves the login if it checks out \\
+\hline
+\texttt{POST /api/\allowbreak session/\allowbreak claim} & Swap a one-time claim token for a real login cookie \\
+\hline
+\texttt{POST /api/\allowbreak login/\allowbreak magic-request} & Ask for an email recovery link \\
+\hline
+\texttt{GET /api/\allowbreak login/\allowbreak magic} & Use that email link to log in \\
+\hline
+\texttt{POST /api/\allowbreak device/\allowbreak token} & Get a code to register a second phone (must be logged in) \\
+\hline
+\texttt{POST /api/\allowbreak device/\allowbreak revoke} & Remove a registered phone (must be logged in) \\
+\hline
+\texttt{GET /api/\allowbreak me} & See your profile, phones, and recent logins (must be logged in) \\
+\hline
+\texttt{POST /api/\allowbreak logout} & End the current login session \\
+\hline
+\texttt{WS /ws?session=<id>} & The laptop's live connection, used to hear "you're approved" \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{The Laptop Page and the Phone App}
+
+The laptop login page is a simple web page that asks the server for a
+one-time code, opens a live connection for that login attempt, and uses
+\texttt{ggwave} to turn the code into sound and play it out loud (though
+too high-pitched to actually hear). A status message on screen moves
+through three steps, sending, phone heard it, approved, so the person
+watching can tell what stage the login has reached, rather than staring
+at a blank screen for up to 30 seconds. If nothing happens, the page tries
+again automatically, up to three times.
+
+The phone app installs itself from the browser onto the phone's home
+screen, and can even work offline after the first time it is opened. Once
+open, it asks for permission to use the microphone and listens
+constantly for a sound signal. When it picks one up, it runs the quiet
+background check described in Section~\ref{sec:methodology-crypto} before
+showing anything on screen, so the phone only ever asks its owner to
+approve logins for accounts it is actually registered to. Tapping approve
+makes the phone sign the login using its private key, which is stored
+safely on the phone and never leaves it, and send that signature straight
+to the server.
+
+\subsection{How the Design Changed During the Project}
+\label{sec:design-evolution}
+
+Because Echo was built step by step (Chapter~\ref{ch:methodology}), a few
+details changed from the original plan once the working system showed
+real problems the plan on paper had missed. Looking back at the project
+history against the original plan shows three clear changes, listed here
+honestly rather than left out:
+
+\begin{itemize}
+  \item \textbf{How account recovery works.} The original plan called for
+  six one-time numeric recovery codes per account, stored as scrambled
+  hashes. That was built (the \texttt{recovery\_codes} table and its code
+  are still in the project), but it was replaced as the main recovery
+  method by a rate-limited email link instead, which felt more practical
+  for someone without a pre-printed list of codes on hand. The key safety
+  property stayed the same either way: recovery is rate-limited and cannot
+  be brute-forced.
+  \item \textbf{How sign-up works.} The original plan assumed the sign-up
+  code would be typed into the phone by hand. A QR-code scanner was added
+  to the phone app instead, so the laptop can show the sign-up link as a
+  scannable code. This made signing up noticeably faster without changing
+  how the underlying code actually works or how safe it is.
+  \item \textbf{Making the live demo more reliable.} Hosting the project
+  on Render.com's free plan brought up a real-world problem the original
+  plan did not consider: the server falls asleep after about 15 minutes
+  with no visitors, so the very first request after that would take up to
+  30 seconds to load. A small background task was added that pings the
+  live server every few minutes to stop it from falling asleep during
+  demonstrations. It has no effect when running the project locally.
+\end{itemize}
+
+Other work, such as a dark mode toggle, a more polished home page, and
+consistent styling across the site, was also done during the project but
+does not change how the login itself works or how secure it is, so it is
+not covered in detail here.
+
+\section{Testing}
+\label{sec:testing}
+
+The correctness of the login process was checked using automated tests
+that talk to a running copy of the server over the network, using real
+signing keys to both sign and forge messages, but no actual sound
+hardware, so the whole set of tests runs in seconds and can be repeated
+after every change. The tests are split into two files:
+\texttt{test-flow.js} checks the whole login process from start to
+finish, including the attack scenarios that matter most for the security
+claims in Section~\ref{sec:methodology-crypto}, and
+\texttt{test-cross-talk.js} checks specifically that one user's phone can
+never be asked to approve a different user's login.
+
+Both files were run again against the current code for this report, using
+Node.js version 22.22.3, on 8 August 2026. Table~\ref{tab:testresults}
+shows the results. Every check that matters for the security claims in
+this report, replaying a recording, forging a signature, one user's device
+being used against another account, expired codes, and reused tokens, all
+passed.
+
+\begin{table}[htbp]
+\centering
+\caption{Automated test results (Node.js v22.22.3, run locally)}
+\label{tab:testresults}
+\begin{tabular}{|L{6.3cm}|L{2.3cm}|L{2.3cm}|}
+\hline
+\textbf{Test file} & \textbf{Checks} & \textbf{Result} \\
+\hline
+\texttt{tests/test-flow.js} (full login process, including replay, forgery, wrong-device, reused claim token, recovery, removing a phone) & 22 & 22 passed, 0 failed \\
+\hline
+\texttt{tests/test-cross-talk.js} (stops one user's phone approving another user's login) & 9 & 9 passed, 0 failed \\
+\hline
+\textbf{Total} & \textbf{31} & \textbf{31 passed, 0 failed} \\
+\hline
+\end{tabular}
+\end{table}
+
+Looking specifically at the threat model in
+Section~\ref{sec:methodology-crypto}, these attack attempts were tested
+directly and every single one was correctly blocked: signing up without a
+valid code; reusing an already-used sign-up code; replaying an
+already-used login code; a signature made with the wrong private key; a
+correct signature used against the wrong user's device; reusing a claim
+token that has already been used once; and trying to log in with a phone
+that has been removed from the account. Two smaller checks also confirm
+that only a phone's own account passes its quiet background check, and
+that a made-up code and an already-used code are correctly told apart
+with different, clear error messages, which matters for spotting problems
+quickly during a live demo.
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+\subsection{How the Real-World Test Was Planned}
+
+Section~\ref{sec:methodology-eval} set a target of at least 90\% success
+at 1\,m in a quiet room, to be tested across nine combinations: three
+distances (0.3\,m, 1\,m, 2\,m) and three noise levels (quiet, speech,
+music), with at least 30 attempts for each combination, 270 attempts in
+total. Each attempt records: whether the phone picked up the code at all,
+whether the whole login finished successfully, how long it took from
+start to finish, the distance, and the noise level, matching the format
+already planned for in the project's evaluation tool
+(Appendix~\ref{app:api}).
+
+\begin{table}[htbp]
+\centering
+\caption{Real-world test results, to be filled in (270 attempts: 3 distances times 3 noise levels times 30 attempts each). This table should be filled in with real measurements from the actual laptop and phone before the report is submitted.}
+\label{tab:evalresults}
+\begin{tabular}{|L{2.6cm}|L{2.4cm}|L{2.2cm}|L{2.4cm}|L{2.4cm}|}
+\hline
+\textbf{Distance} & \textbf{Noise} & \textbf{Attempts} & \textbf{Success rate} & \textbf{Typical time} \\
+\hline
+0.3 m & Quiet & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+0.3 m & Speech & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+0.3 m & Music & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+1 m & Quiet & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+1 m & Speech & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+1 m & Music & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+2 m & Quiet & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+2 m & Speech & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+2 m & Music & 30 & \emph{to be filled in} & \emph{to be filled in} \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{A note on this table.} Table~\ref{tab:evalresults} is left as a
+template on purpose, not filled in with made-up numbers. How well the
+sound carries, and how long a login takes, depends on the exact laptop
+speaker and phone microphone used, the shape and material of the room, and
+the background noise on the day of testing. None of that can be measured
+while writing this report on a computer with no speakers or microphone to
+test with. The plan for collecting this data (recording success, timing,
+distance, and noise for every attempt) is ready to use; what is left is to
+actually run the 270 test attempts on the real laptop and phone, fill in
+this table with the real numbers, and update the conclusion in
+Section~\ref{sec:conclusion-findings} to match. This gap is stated
+plainly here, instead of being hidden behind invented numbers, because
+made-up results would give a false picture of how well the system
+actually performs in the real world, which is the whole point of this
+section.
+
+\subsection{An Early Sign It Works}
+
+Separate from the full 270-attempt test, an early feasibility test
+(\texttt{tests/\allowbreak ultrasonic-\allowbreak auth-\allowbreak test.html}, mentioned in
+Chapter~\ref{ch:methodology}) already showed that the 18 to 20\,kHz sound
+channel works between a real laptop speaker and a real phone microphone
+at close range. That result is the reason the project moved ahead into
+full development in the first place. That same test page is still
+available for quick, informal checks, and it was used to help choose the
+0.3 to 2\,m distance range and the quiet/speech/music noise levels used in
+the full test plan above.

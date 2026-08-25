@@ -148,10 +148,13 @@ app.post('/api/signup', (req, res) => {
   db.prepare('DELETE FROM enroll_tokens WHERE username = ? AND used = 0').run(uname);
 
   const token = rand(16);
-  db.prepare('INSERT INTO enroll_tokens (token, username, expires_at, created_at) VALUES (?, ?, ?, ?)')
-    .run(token, uname, now() + ENROLL_TTL_MS, now());
+  // 6-digit numeric pairing code (e.g. 748291)
+  const pairCode = String(crypto.randomInt(100000, 999999));
 
-  res.json({ ok: true, username: uname, enrollToken: token, ttlMs: ENROLL_TTL_MS });
+  db.prepare('INSERT INTO enroll_tokens (token, code, username, expires_at, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(token, pairCode, uname, now() + ENROLL_TTL_MS, now());
+
+  res.json({ ok: true, username: uname, enrollToken: token, pairCode: pairCode, ttlMs: ENROLL_TTL_MS });
 });
 
 // Step 2: the phone redeems the enroll token and registers its public key
@@ -162,12 +165,23 @@ app.post('/api/enroll', (req, res) => {
     return res.status(400).json({ error: 'enrollToken and a P-256 publicKeyJwk are required' });
   }
 
-  const t = db.prepare('SELECT * FROM enroll_tokens WHERE token = ?').get(String(enrollToken));
-  if (!t) return res.status(401).json({ error: 'invalid enroll token' });
-  if (t.expires_at < now()) return res.status(401).json({ error: 'enroll token expired' });
+  const rawInput = String(enrollToken).trim();
+  const cleanDigits = rawInput.replace(/\D/g, '');
+
+  let t = db.prepare('SELECT * FROM enroll_tokens WHERE token = ?').get(rawInput);
+  if (!t && cleanDigits.length === 6) {
+    t = db.prepare('SELECT * FROM enroll_tokens WHERE code = ?').get(cleanDigits);
+  }
+  if (!t && rawInput.includes('token=')) {
+    const extracted = rawInput.split('token=')[1]?.split('&')[0];
+    if (extracted) t = db.prepare('SELECT * FROM enroll_tokens WHERE token = ?').get(extracted);
+  }
+
+  if (!t) return res.status(401).json({ error: 'invalid enroll code or token' });
+  if (t.expires_at < now()) return res.status(401).json({ error: 'enroll code expired' });
 
   const burned = db.prepare('UPDATE enroll_tokens SET used = 1 WHERE token = ? AND used = 0').run(t.token);
-  if (burned.changes < 1) return res.status(401).json({ error: 'enroll token already used' });
+  if (burned.changes < 1) return res.status(401).json({ error: 'enroll code already used' });
 
   const user = db.prepare('SELECT id FROM users WHERE username = ?').get(t.username);
   const deviceId = rand(9);

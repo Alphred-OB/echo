@@ -1,0 +1,268 @@
+\chapter{Methodology}
+\label{ch:methodology}
+
+\section{Development Methodology}
+
+Echo was built using \textbf{iterative prototyping}. This means each part
+of the system was built on its own, tested on its own, and only then
+connected to the rest, instead of designing the whole system on paper
+first and building it all in one go. This approach was chosen on purpose,
+because Echo's design is a strict chain: sound goes in, the server checks
+it, and the laptop gets logged in. A problem in any one part would block
+everything after it. Checking each part before building on top of it kept
+problems small and easy to find. The seven build stages, in the order they
+happened, were:
+
+\begin{enumerate}[label=\textbf{Stage \arabic*.}, leftmargin=2.2cm]
+  \item \textbf{Does the sound idea even work?} Before writing any server
+  code, a simple test page (\texttt{tests/\allowbreak ultrasonic-\allowbreak auth-\allowbreak test.html}) was
+  built to answer one question: can a real laptop speaker and a real phone
+  microphone actually send a signal at 18 to 20\,kHz (too high-pitched for
+  most people to hear), and at what distance does it stop working? This
+  test also produced the first written list of what the server and phone
+  needed to do.
+  \item \textbf{Build the server first.} The backend was built before any
+  screen the user would see, because the screens needed something to talk
+  to. The full database was set up (users, phones, login attempts,
+  recovery codes, login history), and every part of the API was written
+  and tested as it was added, along with the live-update connection.
+  \item \textbf{Build the sound layer and the phone app.} With the server
+  ready, the laptop login page was built to connect to \texttt{ggwave} (the
+  sound library) and send the one-time code. Then the phone app was built.
+  It listens through the microphone, decodes the sound, and shows an
+  approve or deny screen. Both sides were tested together in the same room
+  first, then at increasing distances. A quiet background check was added
+  so the phone can confirm, before showing anything to the user, that a
+  decoded code actually belongs to the right account.
+  \item \textbf{Add the cryptography.} Once the sound channel worked
+  reliably, the sign-up process was built so the phone creates a private
+  signing key and registers the matching public key with the server. The
+  phone's signing code was written, and the server's signature-checking
+  code was finished. The whole login process was then tested from start to
+  finish: type username, hear sound, tap approve, get logged in. The
+  automated tests were expanded to cover attack scenarios directly.
+  \item \textbf{Add extra security and polish.} With the main flow
+  working, the remaining features were added: a rate-limited way to
+  recover an account, the ability to remove a registered phone, a one-time
+  claim step so only the right laptop gets logged in, a live status
+  display on the login page (transmitting, then phone heard it, then
+  approved), and a normal audible backup for hardware that cannot play
+  very high-pitched sound.
+  \item \textbf{Test how well it actually works.} A test tool was built to
+  run controlled trials, recording whether the phone picked up the code,
+  whether the login finished, how long it took, the distance, and how
+  noisy the room was, across a range of distances and noise levels
+  (Section~\ref{sec:evaluation}).
+  \item \textbf{Write it up.} The final stage produced the API reference,
+  the description of how the system is built, the test results, and the
+  security discussion presented in this report.
+\end{enumerate}
+
+While building the system, the account-recovery method originally planned
+(numeric one-time recovery codes) was replaced with a rate-limited email
+link instead, and the sign-up process was extended with a QR-code scanner
+on the phone to make it faster. Both of these changes are normal for
+iterative prototyping: a working system shows up usability problems that a
+plan on paper does not. Both changes are discussed further in
+Section~\ref{sec:design-evolution}.
+
+\section{System Architecture}
+\label{sec:architecture}
+
+Echo has three parts that work together: a \emph{laptop page} (the device
+being logged into, running in a normal web browser), a \emph{phone app}
+(the trusted, registered device, installed from a browser), and a
+\emph{server}, built with Node.js, that sits between them and stores all
+the data. Figure~\ref{fig:architecture} shows the full login process, step
+by step.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=1.4cm and 2.6cm,
+  box/.style={draw, rounded corners, minimum width=3.4cm, minimum height=1cm, align=center, font=\small},
+  arr/.style={-{Latex[length=2.5mm]}, thick},
+  lbl/.style={font=\scriptsize, align=center}
+]
+\node[box] (laptop) {Laptop browser\\(login page)};
+\node[box, right=of laptop, xshift=2.0cm] (server) {Echo server\\Node.js + Express + SQLite};
+\node[box, right=of server, xshift=2.0cm] (phone) {Phone app\\(listens + signs)};
+
+\draw[arr] (laptop.north) -- ++(0,0.8) -| node[lbl, above, pos=0.25, yshift=1pt] {1. Ask for a one-time code} (server.north);
+\draw[arr] (server.north) ++(0,0.8) -| node[lbl, above, pos=0.75, yshift=1pt] {2. Sends back the code} (laptop.north);
+
+\draw[arr, dashed] (laptop.north) to[out=60, in=120, looseness=1.6]
+  node[lbl, above, yshift=2pt] {3. Code played as sound, 18 to 20\,kHz\\about 1 to 2\,m away} (phone.north);
+
+\draw[arr] (phone.south) -- ++(0,-0.8) -| node[lbl, below, pos=0.75, yshift=-1pt] {4. Phone sends back a signed approval} (server.south);
+
+\draw[arr] (server.south) ++(0,-0.8) -| node[lbl, below, pos=0.25, yshift=-1pt] {5. Server confirms: logged in} (laptop.south);
+\end{tikzpicture}%
+}
+\caption{The Echo login process: the server creates a one-time code, the laptop plays it as sound, the phone signs it once the user approves, and the server tells the laptop it is logged in.}
+\label{fig:architecture}
+\end{figure}
+
+The technology was chosen to keep things simple and quick to build, not to
+handle millions of users. Node.js with Express handles the web requests;
+SQLite, using a feature already built into Node.js, stores users, phones,
+login attempts, recovery codes, and login history, without needing a
+separate database program running; a small library called \texttt{ws}
+handles the live WebSocket connection; both the laptop and phone pages are
+plain JavaScript with no front-end framework, since neither one needs
+enough on-screen state management to justify one; and \texttt{ggwave},
+which runs in the browser, is what turns data into sound and back again on
+both ends. Table~\ref{tab:stack} lists the technology used at each layer.
+
+\begin{table}[htbp]
+\centering
+\caption{Technology used at each layer}
+\label{tab:stack}
+\begin{tabular}{|L{4cm}|L{9cm}|}
+\hline
+\textbf{Layer} & \textbf{Technology} \\
+\hline
+Server & Node.js version 22.5 or later, with Express 4 \\
+\hline
+Database & SQLite, built into Node.js (WAL mode for reliability) \\
+\hline
+Live updates & \texttt{ws} (WebSocket) \\
+\hline
+Sound sending/receiving & \texttt{ggwave}, running in the browser \\
+\hline
+Cryptography & WebCrypto (on the phone); Node's built-in crypto tools (on the server) \\
+\hline
+Phone key storage & IndexedDB, a browser storage area the key cannot be copied out of \\
+\hline
+Phone install & Web App Manifest + Service Worker (lets it work offline) \\
+\hline
+Web pages & Plain JavaScript, HTML, CSS, no framework \\
+\hline
+Hosting & Render.com, set up through a \texttt{render.yaml} file \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{How the Login Process Works}
+\label{sec:methodology-crypto}
+
+\subsection{Signing Up}
+
+Signing up only happens once. The user picks a username
+(\texttt{POST /api/signup}) and gets back a one-time sign-up code. The
+phone, once it has that code (at first typed in by hand, later scanned as
+a QR code, see Section~\ref{sec:design-evolution}), creates a private
+signing key and a matching public key, right there in the browser, and
+sends the public key to the server along with the sign-up code
+(\texttt{POST /api/enroll}). The server checks that the key is the right
+type, marks the sign-up code as used, and saves the public key against the
+user's account. The private key is created in a way that cannot be copied
+out, so it only ever exists inside the phone's browser and can never be
+read, exported, or leaked out by any code, including Echo's own.
+
+\subsection{Logging In}
+
+\begin{enumerate}[label=\arabic*.]
+  \item The user types their username on the laptop. The server creates a
+  random one-time code (a "nonce") tied to that one login attempt
+  (\texttt{POST /api/login/start}), good for 30 seconds and usable only
+  once.
+  \item The laptop turns the code into sound using \texttt{ggwave} and
+  plays it at 18 to 20\,kHz. If nothing happens, it automatically tries
+  again, up to three times.
+  \item The phone, always listening, picks up the code and quietly checks
+  with the server that this code belongs to an account it is actually
+  registered to, before showing anything on screen. This stops a phone
+  from ever asking its owner to approve someone else's login.
+  \item If that check passes, the phone shows an approve or deny screen.
+  If the user approves, the phone signs a short message containing the
+  code and its own device ID, using its private key, and sends that
+  signature to the server (\texttt{POST /api/login/verify}).
+  \item The server looks up the phone's saved public key, checks that the
+  signature matches, checks the code has not expired or been used before,
+  and if everything checks out, marks the code as used and sends a
+  message over the live connection telling the laptop it is approved,
+  along with a one-time claim token.
+  \item The laptop swaps that claim token for a proper login cookie
+  (\texttt{POST /api/\allowbreak session/\allowbreak claim}), which is set with safety flags
+  (\texttt{HttpOnly}, \texttt{SameSite=Strict}, and \texttt{Secure} in
+  production). The claim token can only be used once, so only the laptop
+  that started this exact login can use it.
+\end{enumerate}
+
+The exact message the phone signs, \texttt{echo-v1|<code>|<deviceId>},
+matters more than it looks. Starting it with a version label means the
+system could change later without confusion, and including the phone's own
+device ID, not just the one-time code, stops a signature made for one
+phone from being reused against a different phone's record, even if an
+attacker somehow got hold of it. Table~\ref{tab:nonce} lists the rules the
+one-time code follows, and every one of these rules is directly checked by
+the automated tests in Section~\ref{sec:testing}.
+
+\begin{table}[htbp]
+\centering
+\caption{Rules for the one-time login code}
+\label{tab:nonce}
+\begin{tabular}{|L{4.5cm}|L{8.5cm}|}
+\hline
+\textbf{Property} & \textbf{Rule} \\
+\hline
+Randomness & A random 96-bit value, picked by the server \\
+\hline
+Time limit & Valid for 30 seconds \\
+\hline
+Number of uses & Works once only; marked as used right after \\
+\hline
+Scope & Tied to one login attempt and one username \\
+\hline
+Signed message & \texttt{echo-v1|<code>|<deviceId>}, ties the code to one specific phone \\
+\hline
+How it travels & Not secret: sent as sound (laptop to phone), then again as plain text when the phone checks in. This is safe because the code can only be used once \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Why This Design Is Secure}
+
+Three design choices do most of the security work here, and each one maps
+to a real decision in the code. First, \emph{the one-time code is public
+but can only be used once}, so recording and replaying the login sound
+gets an attacker nothing: the first successful check uses up the code, and
+the server rejects any attempt to use it again, which is tested directly
+in Section~\ref{sec:testing}. Second, \emph{the private key never leaves
+the phone}: because it is created in a way that cannot be exported, there
+is no way, not even through a bug in Echo's own code, to read the raw key
+back out of the browser. Third, \emph{the signature always goes straight
+from the phone to the real Echo server, never through the sound itself or
+through whatever page the laptop happens to be showing}. This is what
+stops a fake copy of the login page from working: even if a victim's
+laptop is pointed at a fake site playing the same sound, the victim's
+phone still only sends its signature to the real Echo server, because
+that destination is decided by the phone's own code, not by the sound it
+heard. A fake site can record and replay the sound, but it cannot make the
+victim's phone send its signature anywhere else. Distance adds a fourth,
+weaker layer of protection: because an 18 to 20\,kHz sound fades quickly in
+air and does not travel well through walls, an attacker outside the room
+cannot trigger the sound part of the process at all. Chapter~\ref{ch:conclusion}
+explains why this is a helpful sign of nearby presence rather than a
+cryptographic guarantee, and how that is different from a proper defence
+against a relay attack.
+
+\section{How the Testing Was Planned}
+\label{sec:methodology-eval}
+
+Two separate testing tools were built, because there are two different
+things that need to work: the cryptography needs to be correct, and the
+sound channel needs to be reliable in the real world. Correctness was
+checked with a 31-check automated test suite (Section~\ref{sec:testing})
+that talks to the server directly over the network, using real signing
+keys but no actual audio hardware, so it runs in seconds and can be
+repeated after every change without needing a quiet room. Sound
+reliability was checked separately, by hand, with controlled trials
+(Section~\ref{sec:evaluation}) at three distances (0.3\,m, 1\,m, 2\,m) and
+in three noise conditions (quiet, speech, music), with at least 30 trials
+for each combination, recording whether the phone picked up the code,
+whether the login finished, and how long it took. This matches the target
+set out in the objectives (Section~\ref{ch:introduction}): at least 90\%
+success at 1\,m in a quiet room.

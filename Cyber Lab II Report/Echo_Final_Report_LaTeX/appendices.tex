@@ -1,0 +1,209 @@
+\chapter{Project Plan}
+\label{app:plan}
+
+Table~\ref{tab:plan} shows the project's plan, phase by phase, matched
+against the course deadlines it was written to meet.
+
+\begin{table}[htbp]
+\centering
+\caption{Project plan and milestones}
+\label{tab:plan}
+\begin{tabular}{|L{2.6cm}|L{3.6cm}|L{7cm}|}
+\hline
+\textbf{Phase} & \textbf{Dates} & \textbf{What was delivered} \\
+\hline
+Phase 0: Feasibility & Before the build started & The \texttt{ggwave} test page working on real hardware \\
+\hline
+Phase 1: Core system & 10 to 28 June & Server, one-time code system, laptop sender, phone decoder \\
+\hline
+Phase 2: Cryptography finished & 29 June to 10 July & Signing, checking signatures, live login updates, leading to the first working demo (13 to 17 July) \\
+\hline
+Phase 3: Hardening & 18 July to 10 August & Groundwork for a fingerprint check, audible backup mode, status display, rate limiting \\
+\hline
+Phase 4: Evaluation & 11 to 21 August & Building and running the real-world test, leading to the final demo (24 to 28 August) \\
+\hline
+Phase 5: Report & 22 to 30 August & Writing this report \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent Fixed course dates: proposal submitted 14 June 2026; proposal
+presentation 15 to 19 June 2026; first working demo 13 to 17 July 2026;
+final demo 24 to 28 August 2026; report due 30 August 2026.
+
+\chapter{API Reference}
+\label{app:api}
+
+This appendix lists the exact request and response for every address in
+Echo's API, first summarised in Table~\ref{tab:api}. Unless stated
+otherwise, all requests and responses use JSON. All timestamps are in
+milliseconds. Every address listed here starts with \texttt{/api}, except
+for the WebSocket address.
+
+\section*{POST /api/signup}
+Claims a username and gives back a one-time sign-up code.
+\textbf{Sends:} \texttt{\{ username: string \}} (2 to 32 characters, lower
+case letters, numbers, underscore, dot, or hyphen).
+\textbf{Replies:} 200 code issued; 400 invalid format; 409 username
+already taken with a phone already registered to it.
+
+\section*{POST /api/enroll}
+Uses a sign-up code to register a phone's public key.
+\textbf{Sends:} \texttt{\{ enrollToken,\allowbreak\ deviceName?,\allowbreak\ publicKeyJwk \}},
+where \texttt{publicKeyJwk} must be an EC key on the P-256 curve.
+\textbf{Replies:} 200 phone registered, returns a \texttt{deviceId}; 400
+missing or wrong fields; 401 code invalid, expired, or already used.
+
+\section*{GET /api/signup/status?token=...}
+Checks whether sign-up has finished yet.
+\textbf{Replies:} 200 \texttt{\{ enrolled, deviceId, expired \}}; 404 code
+not found.
+
+\section*{POST /api/login/start}
+Creates a one-time login code, good for one login attempt only, to be
+played as sound.
+\textbf{Sends:} \texttt{\{ username \}}.
+\textbf{Replies:} 200 \texttt{\{ sessionId, nonce, ttlMs \}}; 404 username
+not found, or no phone registered to it.
+
+\section*{POST /api/login/verify}
+Sends the phone's signature over the one-time code it decoded.
+\textbf{Sends:} \texttt{\{ nonce, deviceId, signature \}}. The signed
+message is \texttt{echo-v1|\allowbreak<nonce>|\allowbreak<deviceId>}.
+\textbf{Replies:} 200 signature valid, laptop told over WebSocket, with a
+\texttt{claimToken}; 400 missing fields; 401 code unknown, expired,
+already used, wrong signature, or wrong device.
+
+\section*{POST /api/session/claim}
+Swaps a one-time claim token, received by the laptop over WebSocket, for
+the login cookie.
+\textbf{Sends:} \texttt{\{ sessionId, claimToken \}}.
+\textbf{Replies:} 200 session created, cookie set with safety flags
+(\texttt{HttpOnly}, \texttt{SameSite=Strict}, and \texttt{Secure} in
+production); 401 not approved yet, or claim token invalid or already used.
+
+\section*{POST /api/login/recovery}
+The older recovery-code login path. Limited to 5 attempts every 15 minutes
+per account.
+\textbf{Sends:} \texttt{\{ username, code \}} (in \texttt{XXXX-XXXX}
+format).
+\textbf{Replies:} 200 code valid, session cookie set; 401 invalid; 429 too
+many attempts.
+
+\section*{POST /api/\allowbreak login/\allowbreak magic-request}
+Asks for an email recovery link (the current main recovery method).
+\textbf{Sends:} \texttt{\{ usernameOrEmail \}}.
+\textbf{Replies:} 200 link sent, if the account exists.
+
+\section*{GET /api/login/magic?token=...}
+Uses an email link to log in and sets the session cookie.
+\textbf{Replies:} 302 redirect to the dashboard on success.
+
+\section*{POST /api/recovery/generate} \textit{(must be logged in)}
+Creates six one-time recovery codes, shown once as plain text, then stored
+only as scrambled hashes.
+\textbf{Replies:} 200 \texttt{\{ codes: [...] \}}; 401 not logged in.
+
+\section*{POST /api/device/token} \textit{(must be logged in)}
+Gives a new sign-up code to register a second phone.
+\textbf{Replies:} 200 \texttt{\{ enrollToken, ttlMs \}}; 401 not logged
+in.
+
+\section*{POST /api/device/revoke} \textit{(must be logged in)}
+Removes a phone; its key is rejected on every login after that.
+\textbf{Sends:} \texttt{\{ deviceId \}}.
+\textbf{Replies:} 200 removed; 401 not logged in; 404 phone not found, or
+not owned by this account.
+
+\section*{GET /api/me} \textit{(must be logged in)}
+Returns the current user's profile, registered phones, and recent login
+history.
+
+\section*{POST /api/logout} \textit{(must be logged in)}
+Ends the current session and clears the login cookie.
+
+\section*{WS /ws?session=sessionId}
+The laptop's live connection, opened right after
+\texttt{POST /api/login/start}. The server refuses the connection if the
+address is wrong, the \texttt{session} value is missing, or no matching
+login attempt exists. Once the login is approved, the server sends:
+\begin{lstlisting}
+{ "type": "authenticated", "claimToken": "one-time-token..." }
+\end{lstlisting}
+
+\section*{Error format}
+Every error reply looks the same:
+\texttt{\{ "error": "a plain description of what went wrong" \}}.
+
+\section*{How long data is kept}
+A background task runs every 60 seconds and deletes: login attempts that
+expired more than 10 minutes ago, logged-in sessions past their 8-hour
+limit, and unused sign-up codes that expired more than 10 minutes ago.
+
+\chapter{Automated Test Results: Full Output}
+\label{app:tests}
+
+The following is the exact, unedited output of both automated test files,
+run against a locally hosted copy of the current code (Node.js version
+22.22.3) on 8 August 2026. This is the raw evidence behind the results
+shown in Table~\ref{tab:testresults}.
+
+\section*{tests/test-flow.js}
+\begin{lstlisting}
+Echo protocol test against http://localhost:8000
+
+  (check) signup returns enroll token
+  (check) enroll WITHOUT token rejected
+  (check) enroll with token succeeds
+  (check) enroll token single-use
+  (check) taken username rejected
+  (check) signup status shows enrolled
+  (check) login/start returns nonce + session
+  (check) valid signature accepted
+  (check) REPLAY rejected (nonce single-use)
+  (check) FORGED signature rejected
+  (check) ANOTHER user's device rejected
+  (check) websocket push received
+  (check) session claim sets cookie
+  (check) /api/me returns user
+  (check) claim token single-use
+  (check) magic request succeeds
+  (check) magic token generated in DB
+  (check) magic login redirects to dashboard
+  (check) add-device token issued (auth)
+  (check) add-device token requires auth
+  (check) device revoked
+  (check) REVOKED device cannot even start login
+
+22 passed, 0 failed
+\end{lstlisting}
+
+\section*{tests/test-cross-talk.js}
+\begin{lstlisting}
+Testing cross-talk prevention against http://localhost:8000
+
+Enrolled Kwame and Kofi (two independent accounts)
+  (check) Kofi login starts successfully
+  (check) Kwame device pre-flight check is REJECTED with 403
+  (check) Mismatched user error message
+  (check) Kofi device pre-flight check succeeds with 200
+  (check) Succeeding response returns username
+  (check) Fake nonce check returns 404
+  (check) User C pre-flight check passes
+  (check) User C signature verification succeeds
+  (check) Used nonce check returns 410
+
+9 passed, 0 failed
+\end{lstlisting}
+
+\noindent Every single check passed (31 out of 31, no failures). The full
+source code referenced in this appendix and in Chapter~\ref{ch:design} is
+available in the project repository, linked below.
+
+\chapter{Repository and Deployment}
+\label{app:repo}
+
+\begin{itemize}
+  \item \textbf{Source code:} \url{https://github.com/Alphred-OB/echo}, the full project code and its commit history.
+  \item \textbf{Live demo:} \url{https://echo-n51n.onrender.com}, hosted on Render.com's free plan. The server falls asleep after about 15 minutes with no visitors (so the first visit after that may take up to 30 seconds to load), and the free plan does not keep permanent storage, so the database resets every time a new version is deployed. This is a limit of the free hosting plan, not a fault in the system itself.
+\end{itemize}

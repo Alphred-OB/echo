@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
 import '../services/crypto_service.dart';
@@ -18,8 +19,8 @@ class EnrollmentScreen extends StatefulWidget {
 class _EnrollmentScreenState extends State<EnrollmentScreen> {
   final MobileScannerController _scannerController = MobileScannerController();
   final TextEditingController _nameController = TextEditingController(text: 'My Phone');
-  final TextEditingController _urlController = TextEditingController(text: 'http://localhost:8000');
-  final TextEditingController _tokenController = TextEditingController();
+  final List<TextEditingController> _pinControllers = List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _pinFocusNodes = List.generate(6, (_) => FocusNode());
 
   bool _isProcessing = false;
   bool _isManualMode = false;
@@ -29,8 +30,12 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
   void dispose() {
     _scannerController.dispose();
     _nameController.dispose();
-    _urlController.dispose();
-    _tokenController.dispose();
+    for (final c in _pinControllers) {
+      c.dispose();
+    }
+    for (final f in _pinFocusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -66,6 +71,48 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
     }
   }
 
+  String _getEnteredCode() {
+    return _pinControllers.map((c) => c.text.trim()).join();
+  }
+
+  void _onDigitChanged(int index, String value) {
+    if (value.length > 1) {
+      // User pasted multiple characters (e.g. 6-digit code)
+      final digits = value.replaceAll(RegExp(r'\D'), '');
+      if (digits.isNotEmpty) {
+        for (int i = 0; i < 6 && i < digits.length; i++) {
+          _pinControllers[i].text = digits[i];
+        }
+        final targetIndex = (digits.length < 6) ? digits.length : 5;
+        _pinFocusNodes[targetIndex].requestFocus();
+
+        if (digits.length >= 6) {
+          _submitManualCode();
+        }
+        return;
+      }
+    }
+
+    if (value.isNotEmpty) {
+      HapticFeedback.selectionClick();
+      if (index < 5) {
+        _pinFocusNodes[index + 1].requestFocus();
+      } else {
+        _pinFocusNodes[index].unfocus();
+        _submitManualCode();
+      }
+    }
+  }
+
+  void _submitManualCode() {
+    final code = _getEnteredCode();
+    if (code.length < 6) {
+      setState(() => _errorMessage = 'Please enter all 6 digits');
+      return;
+    }
+    _performEnrollment(serverUrl: 'http://localhost:8000', enrollToken: code);
+  }
+
   Future<void> _performEnrollment({
     required String serverUrl,
     required String enrollToken,
@@ -92,6 +139,7 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
       );
 
       if (!result.success) {
+        HapticFeedback.vibrate();
         setState(() {
           _isProcessing = false;
           _errorMessage = result.error ?? 'Enrollment failed';
@@ -99,6 +147,7 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
         return;
       }
 
+      HapticFeedback.heavyImpact();
       await StorageService.saveCredentials(
         privateKey: privateKeyStr,
         deviceId: result.deviceId!,
@@ -109,6 +158,7 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
 
       widget.onEnrolled();
     } catch (e) {
+      HapticFeedback.vibrate();
       setState(() {
         _isProcessing = false;
         _errorMessage = 'Enrollment failed: $e';
@@ -146,30 +196,33 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Pair with Computer',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? EchoTheme.textDark : EchoTheme.textLight,
+                  letterSpacing: -0.4,
                 ),
               ),
-              const SizedBox(height: 6),
-
+              const SizedBox(height: 4),
               Text(
-                'Scan the QR code on your computer screen',
-                textAlign: TextAlign.center,
+                _isManualMode
+                    ? 'Enter the 6-digit code shown on your screen'
+                    : 'Scan the QR code on your computer screen',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   color: isDark ? EchoTheme.mutedDark : EchoTheme.mutedLight,
                 ),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
+              // Error banner
               if (_errorMessage != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: EchoTheme.badSoft,
                     borderRadius: BorderRadius.circular(EchoTheme.rSm),
@@ -179,178 +232,200 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
                     _errorMessage!,
                     style: const TextStyle(
                       color: EchoTheme.bad,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(height: 16),
               ],
 
               if (!_isManualMode) ...[
-                // Viewfinder Card
-                Container(
-                  height: 300,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(EchoTheme.rLg),
-                    border: Border.all(
-                      color: isDark ? EchoTheme.borderDark : EchoTheme.borderStrongLight,
-                      width: 1.5,
+                // QR Scanner Viewport
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(EchoTheme.rLg),
+                  child: Container(
+                    width: double.infinity,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(EchoTheme.rLg),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: EchoTheme.accent.withValues(alpha: 0.08),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      MobileScanner(
-                        controller: _scannerController,
-                        onDetect: _onDetect,
-                      ),
-                      Container(
-                        width: 210,
-                        height: 210,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: EchoTheme.accent, width: 2.5),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      if (_isProcessing)
-                        Container(
-                          color: Colors.black54,
-                          child: const Center(
-                            child: CircularProgressIndicator(color: Colors.white),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                TextButton(
-                  onPressed: () => setState(() => _isManualMode = true),
-                  child: const Text(
-                    'Enter pairing token manually',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                ),
-              ] else ...[
-                // Manual Entry Card
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        const Text(
-                          'Server URL',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                        MobileScanner(
+                          controller: _scannerController,
+                          onDetect: _onDetect,
                         ),
-                        const SizedBox(height: 6),
-                        TextField(
-                          controller: _urlController,
-                          decoration: InputDecoration(
-                            hintText: 'http://localhost:8000',
-                            filled: true,
-                            fillColor: isDark ? const Color(0xFF090D16) : const Color(0xFFF8FAFC),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(EchoTheme.rSm),
-                              borderSide: BorderSide(
-                                color: isDark ? EchoTheme.borderDark : EchoTheme.borderLight,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        const Text(
-                          'Enroll Token',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 6),
-                        TextField(
-                          controller: _tokenController,
-                          decoration: InputDecoration(
-                            hintText: 'Paste token from signup link',
-                            filled: true,
-                            fillColor: isDark ? const Color(0xFF090D16) : const Color(0xFFF8FAFC),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(EchoTheme.rSm),
-                              borderSide: BorderSide(
-                                color: isDark ? EchoTheme.borderDark : EchoTheme.borderLight,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isProcessing
-                                ? null
-                                : () {
-                                String rawToken = _tokenController.text.trim();
-                                String serverUrl = _urlController.text.trim().isEmpty ? 'http://localhost:8000' : _urlController.text.trim();
-
-                                if (rawToken.isEmpty) {
-                                  setState(() => _errorMessage = 'Please enter an enroll token');
-                                  return;
-                                }
-
-                                // Smart extraction if full link or snippet was pasted
-                                if (rawToken.contains('token=')) {
-                                  final parts = rawToken.split('token=');
-                                  if (parts.length > 1) {
-                                    rawToken = parts[1].split('&').first;
-                                  }
-                                }
-                                if (rawToken.startsWith('http://') || rawToken.startsWith('https://')) {
-                                  try {
-                                    final uri = Uri.parse(rawToken);
-                                    final extracted = uri.queryParameters['token'];
-                                    if (extracted != null && extracted.isNotEmpty) {
-                                      rawToken = extracted;
-                                      serverUrl = '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
-                                    }
-                                  } catch (_) {}
-                                }
-
-                                _performEnrollment(serverUrl: serverUrl, enrollToken: rawToken);
-                              },
-                            child: _isProcessing
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                  )
-                                : const Text('Pair Device'),
+                        // Scanner reticle
+                        Container(
+                          width: 180,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: EchoTheme.accent, width: 2.5),
+                            borderRadius: BorderRadius.circular(EchoTheme.rMd),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
 
-                TextButton(
-                  onPressed: () => setState(() => _isManualMode = false),
-                  child: const Text(
+                // Switch to 6-digit manual entry
+                TextButton.icon(
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _isManualMode = true);
+                  },
+                  icon: const Icon(Icons.dialpad_rounded, size: 18),
+                  label: const Text(
+                    'Enter 6-digit code manually',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                ),
+              ] else ...[
+                // ── 6-Digit Individual Pin Input Card ──
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: isDark ? EchoTheme.surfaceDark : Colors.white,
+                    borderRadius: BorderRadius.circular(EchoTheme.rLg),
+                    border: Border.all(
+                      color: isDark ? EchoTheme.borderDark : EchoTheme.borderLight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // 6 Individual Digit Boxes
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          for (int i = 0; i < 6; i++) ...[
+                            _buildDigitBox(i, isDark),
+                            if (i == 2) const SizedBox(width: 12) else if (i < 5) const SizedBox(width: 6),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Pair Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isProcessing ? null : _submitManualCode,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: EchoTheme.accent,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(EchoTheme.rMd),
+                            ),
+                          ),
+                          child: _isProcessing
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Pair Device',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                TextButton.icon(
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _isManualMode = false);
+                  },
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                  label: const Text(
                     'Switch back to camera scanner',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                 ),
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDigitBox(int index, bool isDark) {
+    return SizedBox(
+      width: 44,
+      height: 52,
+      child: RawKeyboardListener(
+        focusNode: FocusNode(),
+        onKey: (event) {
+          if (event is RawKeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.backspace &&
+              _pinControllers[index].text.isEmpty &&
+              index > 0) {
+            _pinFocusNodes[index - 1].requestFocus();
+          }
+        },
+        child: TextField(
+          controller: _pinControllers[index],
+          focusNode: _pinFocusNodes[index],
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          maxLength: 1,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            fontFamily: 'JetBrains Mono',
+            color: EchoTheme.accent,
+          ),
+          decoration: InputDecoration(
+            counterText: '',
+            contentPadding: EdgeInsets.zero,
+            filled: true,
+            fillColor: isDark ? const Color(0xFF090D16) : const Color(0xFFF8FAFC),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: isDark ? EchoTheme.borderDark : const Color(0xFFCBD5E1),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: isDark ? EchoTheme.borderDark : const Color(0xFFE2E8F0),
+                width: 1.5,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: EchoTheme.accent,
+                width: 2.0,
+              ),
+            ),
+          ),
+          onChanged: (val) => _onDigitChanged(index, val),
         ),
       ),
     );

@@ -1,0 +1,182 @@
+\chapter{Literature Review}
+\label{ch:literature}
+
+\section{Introduction}
+
+This chapter looks at the research and industry work that shaped Echo's
+design. It has three parts. Section~\ref{sec:lit-password} looks at why
+passwords keep failing, even after decades of security advice.
+Section~\ref{sec:lit-passwordless} compares the passwordless methods used
+today, using the comparison approach set out by Bonneau and colleagues
+\cite{bonneau2012quest}, so the trade-offs are shown clearly rather than
+just described in general terms. Section~\ref{sec:lit-acoustic} looks at
+research on sending data through sound and pairing devices, which is what
+Echo's sound channel is built on. Section~\ref{sec:lit-position} brings
+these three parts together to explain exactly what Echo adds that is new.
+
+\section{Why Password Authentication Fails}
+\label{sec:lit-password}
+
+A password asks a user to invent, remember, and correctly recall a made-up
+secret for every account they own, without ever writing it down somewhere
+unsafe, reusing it, or being fooled by a fake copy of the login page asking
+for it. NIST, the US government's standards body, changed its official
+password guidance for exactly this reason: it moved away from forcing
+users to change passwords often and follow strict complexity rules,
+because those older rules pushed people toward predictable passwords that
+were actually easier, not harder, to guess \cite{nist80063b}. Instead,
+NIST now recommends checking new passwords against lists of already-leaked
+passwords, allowing long plain-English phrases instead of complex strings,
+and relying on a second login factor for anything important. In short,
+even the standards body admits that a password alone is no longer good
+enough to trust.
+
+The cost of this weakness shows up clearly in real breach numbers. The
+2024 Verizon Data Breach Investigations Report found that stolen, reused,
+or guessed passwords were the leading way attackers broke into systems
+across 10,626 confirmed breaches, with phishing close behind and human
+error playing a part in over two-thirds of all cases
+\cite{verizon2024dbir}. OWASP, a well-known security organisation, lists
+in its Authentication Cheat Sheet everything a developer must add just to
+keep a normal password login reasonably safe: multi-factor login,
+protection against stolen-password reuse, limits on repeated attempts, safe
+cookie settings, and checks against leaked-password lists
+\cite{owaspauthn}. Every one of these is a patch added on top of a weak
+idea, rather than a fix to the idea itself. That is the real reason the
+industry has spent the last ten years building alternatives.
+
+\section{Passwordless Authentication: A Comparative Review}
+\label{sec:lit-passwordless}
+
+Bonneau and colleagues \cite{bonneau2012quest} built a framework for
+comparing password replacements on ease of use, ease of adoption, and
+security, and their main finding still holds true more than ten years
+later: not one method they studied kept every benefit that ordinary
+passwords already had. In other words, every passwordless method below
+trades away something in exchange for something else.
+
+\subsection{One-Time Codes and Magic Links}
+
+Text message and email one-time codes fix the password reuse problem
+directly, since a stolen password database cannot be reused to log in with
+a one-time code. But the code still has to pass through something the
+user reads and retypes, so it can still be phished: a fake login page can
+simply ask for the code and pass it on to the real site straight away.
+Text-message codes also depend on the mobile network staying secure, and
+are open to a well-known attack called SIM-swapping, which is exactly why
+NIST's guidelines discourage using text messages as a login factor for
+anything sensitive \cite{nist80063b}. Magic links remove the retyping step
+but add a separate channel (email) that the user has to switch to, so the
+login is now only as safe as that email account.
+
+\subsection{QR-Code Login}
+
+QR-code login, the pattern made popular by WhatsApp Web and used by many
+workplace login systems, shows a code on the login screen that an
+already-logged-in phone scans to approve the session. This removes typing
+completely and ties the approval to a device the user already trusts, but
+it means aiming a camera at a screen, which is awkward in some situations.
+It also has its own phishing risk: if an attacker can copy the real site's
+QR code onto their own fake page, the code itself does not prove which
+physical device is actually asking for it.
+
+\subsection{FIDO2 / WebAuthn Passkeys}
+
+The FIDO2 and WebAuthn standards, built jointly by the FIDO Alliance and
+the W3C, are where the industry is currently heading for passwordless
+login, and they are the technology behind "sign in with a passkey" on
+Apple, Google, and Microsoft devices since 2022
+\cite{fidoalliance, w3cwebauthn}. A passkey is a pair of matching digital
+keys created on the user's own device; the private half never leaves that
+device (or the company's secure syncing system), and the browser ties
+every login attempt to the exact website asking for it. This makes
+passkeys very hard to phish: a fake copy of a login page hosted on the
+wrong website simply cannot get a valid login approval, no matter how
+convincing it looks. This is the strongest of the methods covered here,
+and Echo borrows its main idea directly: a key pair tied to one device,
+where the private half never leaves that device.
+
+Passkeys are not perfectly smooth to use, though. The user still has to
+notice and respond to a pop-up, choose the right device or account when
+more than one is available, and, when logging in on a new device, often
+has to scan a QR code anyway, similar to the method described above.
+Syncing passkeys across a person's Apple or Google account is convenient,
+but it locks the user into that company's system, and the way passkeys
+look and behave still differs noticeably between browsers and phones,
+which is part of why they have not yet fully replaced passwords as a
+fallback option on most websites.
+
+\subsection{Biometric and Proximity-Based Approaches}
+
+Fingerprint and face recognition on a phone are usually used today as a
+lock on an existing key, for example, unlocking a passkey, rather than
+being sent to a remote server directly, since fingerprint data is not
+something that should ever be sent over the internet or stored elsewhere.
+Bluetooth- and NFC-based login (used in some workplace systems) is closer
+to what Echo attempts: it logs a user in because a trusted device is
+nearby, without needing the user to unlock or tap that device every time
+after an initial setup. The problem is cost and inconsistency: Bluetooth
+pairing and distance detection behave differently across phone brands and
+increasingly require the user to grant special permissions, and NFC needs
+the two devices to be brought close enough to physically touch, which
+removes the "just walk up and be recognised" feeling this type of login is
+supposed to give.
+
+\section{Acoustic Data Transmission and Device Pairing}
+\label{sec:lit-acoustic}
+
+Using sound to send data between everyday devices is an old idea, older
+than the smartphone. Madhavapeddy and colleagues
+\cite{madhavapeddy2005audio} showed that ordinary audio tones could carry
+useful data between two mobile phones during an active phone call, sending
+around 20 bits per second with a very low error rate over 3 metres, using
+DTMF-style tones (the same kind used for phone keypads). Their work showed
+that sound is a genuinely usable wireless channel, not just a novelty,
+because it needs no Bluetooth pairing, no Wi-Fi connection, and no direct
+line of sight. That same idea, that ordinary speakers and microphones can
+carry data with no setup step at login time, is exactly what makes sound
+useful as proof that a phone is physically nearby.
+
+Security researchers have also studied sound channels from the opposite
+direction, as a way data could leak out without permission. Hanspach and
+Goetz \cite{hanspach2013covert} built a network of computers that could
+pass data to each other, hop by hop, using nothing but their normal
+speakers and microphones at a near-silent pitch, in the very same
+18 to 20\,kHz range that Echo uses, and suggested ways to defend against it,
+such as filtering out high-pitched sound in hardware and watching for
+unexpected microphone use. Their work is a useful warning for Echo's own
+threat model (Chapter~\ref{ch:design}): the same qualities that make a
+near-silent sound channel convenient for a normal login, it passes through
+some walls, needs no pairing, and cannot be heard, also make it useful for
+a malicious data leak on a device that has already been broken into. A
+security-minded system should be open about when and why it is using the
+microphone or speaker.
+
+The \texttt{ggwave} library \cite{ggwave}, which Echo uses to send and
+receive sound, works by playing several tones at once to represent data
+(a method called Frequency-Shift Keying) with built-in error correction.
+It can send roughly 8 to 16 bytes per second depending on the settings used,
+which is more than enough for a short one-time code and phone identifier.
+It offers an \texttt{ULTRASOUND\_NORMAL} setting in the 18 to 20\,kHz range,
+plus a normal audible fallback for hardware that cannot reproduce those
+high frequencies cleanly, and Echo uses both directly.
+
+\section{Positioning Echo}
+\label{sec:lit-position}
+
+Looking at all this research together shows a gap worth filling. The
+individual pieces Echo needs, a key pair tied to one device (from
+WebAuthn), a no-setup-needed nearby-device channel (from audio networking
+research), and an honest understanding of that channel's own risks (from
+research on sound as a data leak), are each well studied on their own, but
+rarely put together into one working, understandable website login system
+outside of the big tech companies' own passkey systems. Echo does not
+invent a new cryptographic method; it uses the exact same ECDSA signing
+that WebAuthn uses. What Echo adds is a complete, understandable login
+process that replaces the device-discovery step passkeys normally handle
+behind the scenes with a simple sound-based handshake, judged honestly
+against both what it proves cryptographically
+(Chapter~\ref{ch:design}, Section~\ref{sec:testing}) and how reliable the
+sound channel actually is in the real world
+(Chapter~\ref{ch:design}, Section~\ref{sec:evaluation};
+Chapter~\ref{ch:conclusion}).

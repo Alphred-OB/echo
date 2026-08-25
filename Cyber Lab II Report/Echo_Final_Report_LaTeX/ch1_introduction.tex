@@ -1,0 +1,161 @@
+\chapter{Introduction, Aims and Objectives}
+\label{ch:introduction}
+
+\section{Introduction to Problem}
+
+For more than fifty years, the password has been the main way people prove
+who they are on the web. It has not aged well. People are asked to make
+up, remember, and regularly change dozens of secret words for accounts they
+barely use, so they do what any person under that kind of pressure would
+do: they pick easy passwords, and they use the same one everywhere. The
+2024 Verizon Data Breach Investigations Report looked at 10,626 confirmed
+data breaches and found that stealing or guessing login details was the
+single most common way attackers got in, the starting point in 38\% of
+cases, with phishing close behind at 15\%, and human error playing a part
+in 68\% of all breaches \cite{verizon2024dbir}. The problem is not that
+people are careless. The problem is that passwords ask ordinary users to
+be perfect guardians of a secret that is easy to steal by fake emails, easy
+to reuse, and expensive to change, while proving nothing about whether the
+person typing it is really who they say they are.
+
+The tech industry has answered with a wave of "passwordless" login methods:
+one-time codes sent by text or email, magic links, QR-code login, and,
+more and more, passkeys built on a standard called FIDO2/WebAuthn. Each of
+these fixes part of the problem but leaves another part open. A text
+message code can still be phished, and it depends on the phone network
+being secure. A magic link removes the typing but adds a second thing the
+user must switch to, their email inbox, and now the login is only as safe
+as that inbox. QR-code login means aiming a camera at a screen, which is
+awkward. Passkeys get the hard cryptography right, tying a secret key to
+one specific website, but the user still has to notice a pop-up on their
+screen, pick the right device, and deal with quirks that differ from one
+browser or phone to the next. None of these widely used methods let a
+person log in just by having their trusted phone nearby and giving a quick
+nod of approval.
+
+This project tries to close that gap. It asks whether a sound that people
+cannot hear, sent between a laptop and a phone, combined with strong
+cryptography, can give a login experience with no typing beyond a
+username, no aiming a camera, and no switching to a second app, while
+still standing up to the same attacks that make passwords and their
+replacements weak: phishing, replaying a stolen login attempt, and
+stealing login details from far away.
+
+\section{Introduction to Project, Aim and Objectives}
+
+\subsection*{Project Aim}
+
+The aim of this project is to design, build, and test Echo, a passwordless
+login system for websites. A laptop and a phone that the user has already
+registered talk to each other using a sound too high-pitched for most
+people to hear, backed by public-key cryptography. The project also checks,
+through real testing, whether this idea is both cryptographically sound and
+reliable enough for everyday use.
+
+\subsection*{Objectives}
+
+\begin{enumerate}[label=\arabic*.]
+  \item Look at why passwords fail in practice, and compare the trade-offs
+  made by the passwordless methods already in use (one-time codes, magic
+  links, QR-code login, and FIDO2/WebAuthn passkeys), to explain why Echo
+  is designed the way it is.
+  \item Build a sound-based communication layer, using a library called
+  \texttt{ggwave}, that reliably sends a one-time code from a laptop's
+  speakers to a phone's microphone at 18 to 20\,kHz (too high for most
+  people to hear), with a normal audible backup for hardware that cannot
+  play those high frequencies.
+  \item Build the Echo server: registering users and phones, creating and
+  managing one-time codes, checking digital signatures, sending live
+  updates over WebSocket, and letting users recover their account, all
+  backed by a SQLite database.
+  \item Build the phone app (a Progressive Web App, meaning it installs
+  from a browser): it listens through the microphone, decodes the sound,
+  shows an approve or deny screen, creates a private signing key that
+  never leaves the phone, and signs login requests.
+  \item Build a set of automated tests that check, without needing real
+  audio hardware, that a replayed login sound, a forged signature, an
+  expired code, and someone else's phone are all correctly rejected by the
+  server.
+  \item Test how well the sound actually works in the real world, at
+  different distances (0.3\,m, 1\,m, 2\,m) and in different amounts of
+  background noise (quiet, speech, music), aiming for at least 90\%
+  success at 1\,m in a quiet room.
+  \item Build and test a way for users to recover their account so they
+  are never locked out for good, along with basic safety features like
+  limiting repeated attempts.
+\end{enumerate}
+
+\section{Research Questions}
+
+The testing in this report is built around four questions:
+
+\begin{enumerate}[label=RQ\arabic*.]
+  \item Can an everyday laptop speaker and an everyday phone microphone
+  reliably send a short piece of data at a near-silent pitch (18 to 20\,kHz)
+  across normal login distances (0.3 to 2\,m) and in real background noise?
+  \item Does tying that sound to a one-time code and a phone-specific
+  digital signature stop the classic attacks that break weaker
+  passwordless methods, namely replaying a recorded login and faking a
+  signature?
+  \item How long does the whole process take, from the server creating the
+  code to the laptop being logged in, and does that compare well with
+  other passwordless methods?
+  \item What risks does a sound-based approach still leave open, and how
+  should those risks be explained honestly in a project like this, rather
+  than glossed over?
+\end{enumerate}
+
+\section{Scope}
+
+This project is meant to produce a working system that can be properly
+tested, not a finished commercial product. Echo includes: signing up with
+a username and registering one phone; logging in using a one-time code
+sent as sound; digital signatures and server-side checking; live updates
+over WebSocket and cookie-based sessions; a rate-limited way to recover an
+account by email; and the ability to remove a registered phone. It
+deliberately leaves out: a native phone app (the phone side is a
+browser-installed app instead, to save time during the semester); strong
+defences against an attacker relaying the sound over a network rather than
+being physically present (this risk is discussed, but not solved, since
+solving it needs hardware control a web browser does not give);
+production-level account features such as email verification or an admin
+panel; and letting one account register more than one phone. These
+choices are explained fully in Section~\ref{sec:further-work} as things to
+build next, not as gaps the report tries to hide.
+
+\section{Project Justification}
+
+Passwordless login is not a small or unusual topic. Major tech companies,
+browser makers, and an industry group called the FIDO Alliance have spent
+the last ten years pushing toward exactly this goal, and the rollout of
+passkeys by Apple, Google, and Microsoft since 2022 shows where the whole
+industry is heading. But the mainstream solutions are built to fit large
+companies and specific platforms, which leaves an interesting and useful
+question for a security project: what is the smallest possible way to
+prove "the user's trusted phone is here, and its owner approved this
+login," without depending on one company's infrastructure, and how far can
+a small, understandable, self-built version of that idea be pushed within
+one semester? Building the sound channel, the one-time code system, the
+signing process, and the checking logic from scratch, instead of using an
+existing WebAuthn library, forces every decision to be explicit and
+checkable: what is secret, what is public, what expires, and what an
+attacker can and cannot do with a recording, a stolen signature, or a fake
+website. That is what makes this a good Cybersecurity capstone project,
+and it is why this report spends as much space on the threat model and the
+failed-attack tests as it spends on the working demo.
+
+\section{Organization of Chapters}
+
+The rest of this report has four more chapters. Chapter~\ref{ch:literature}
+looks at why passwords fail, compares the passwordless methods already in
+use, and reviews the sound-based and cryptographic techniques Echo is
+built on. Chapter~\ref{ch:methodology} explains the step-by-step way the
+system was built, its overall design, the login process itself, and the
+technology choices behind each part. Chapter~\ref{ch:design} shows the
+actual design of the server, the laptop page, and the phone app, the
+automated tests and their results, and the real-world testing of sound
+reliability and login speed across distance and noise. Chapter~\ref{ch:conclusion}
+draws conclusions against the aims and objectives set out here, states the
+project's limitations honestly, and suggests what to build next.
+References and supporting appendices, including the project plan and the
+full test results, are at the end of the report.

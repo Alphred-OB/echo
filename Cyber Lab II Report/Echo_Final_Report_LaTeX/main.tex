@@ -1,0 +1,79 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+% ---------- Page geometry: 4cm left margin for binding, per Cyber Lab II guidelines ----------
+\usepackage[a4paper,left=4cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}              % Times New Roman substitute
+\usepackage{microtype}
+\usepackage{graphicx}
+\graphicspath{{./figures/}{./}}
+\usepackage{setspace}
+\onehalfspacing                    % 1.5 line spacing, per guidelines
+\usepackage{ragged2e}
+\RaggedRight                       % left-justified text, per guidelines
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{upquote}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\setlength{\headheight}{14pt}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=black, citecolor=blue!60!black,
+            urlcolor=blue!60!black, breaklinks=true}
+\usepackage{tocloft}
+\usepackage{titlesec}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  backgroundcolor=\color{gray!7},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  showstringspaces=false
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\small\thepage}
+\fancyhead[L]{\small\leftmark}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\Large}{Chapter \thechapter}{0pt}{\Large}
+\titlespacing*{\chapter}{0pt}{0pt}{20pt}
+
+\begin{document}
+
+\input{frontmatter}
+
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+
+\pagenumbering{arabic}
+
+\input{ch1_introduction}
+\input{ch2_literature}
+\input{ch3_methodology}
+\input{ch4_design}
+\input{ch5_conclusion}
+
+\input{references}
+
+\appendix
+\input{appendices}
+
+\end{document}

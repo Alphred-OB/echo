@@ -1,0 +1,163 @@
+\chapter{Conclusions and Further Work}
+\label{ch:conclusion}
+
+\section{Summary of Findings}
+\label{sec:conclusion-findings}
+
+This project set out to find whether a sound too high-pitched to hear,
+combined with strong cryptography, can give a passwordless web login that
+needs no typing beyond a username, no aiming a camera, and no second app
+to think about, while still standing up to the attacks that make
+passwords and their replacements weak. Looking back at the research
+questions from Section~\ref{ch:introduction}:
+
+\textbf{RQ1 (does the sound actually work).} The early feasibility test
+and the finished build both confirm that an ordinary laptop speaker and an
+ordinary phone microphone can reliably exchange a short signal at
+18 to 20\,kHz at close range, which is why the project was able to move
+forward into full development. What this report cannot yet say with the
+same confidence is the exact success rate across the full range of
+distances and noise levels planned in Section~\ref{sec:methodology-eval},
+because, as stated plainly in Table~\ref{tab:evalresults}, the full
+270-attempt test had not been carried out on the real presentation
+hardware at the time of writing. This is the single most important piece
+of work still to do before the project's performance claim is fully
+backed up by evidence, and it is said clearly here rather than covered up
+with invented numbers.
+
+\textbf{RQ2 (is the cryptography correct).} This question can be answered
+with much more confidence. The 31-check automated test suite
+(Section~\ref{sec:testing}), run again for this report, passed completely:
+replaying a used code, forging a signature with the wrong key, using a
+valid signature against the wrong device, reusing a claim token, and
+trying to log in with a removed phone were all correctly blocked, and the
+background check correctly stopped one user's phone from ever being asked
+to approve someone else's login. Within what the tests actually check, the
+cryptography behaves exactly as designed: nothing secret ever needs to
+travel through the sound, and a one-time code combined with a
+device-specific signature makes the classic replay and forgery attacks
+that break weaker passwordless methods (Chapter~\ref{ch:literature})
+effectively impossible against this system.
+
+\textbf{RQ3 (how fast is it).} The full process, creating the code,
+playing it as sound, decoding it, the background check, user approval,
+signing, checking, and confirming the session, was designed around an
+8 to 10 second target based on the demo script used during development.
+Exact, measured timing figures depend on the same real-world test
+described under RQ1, and are left for that completed test rather than
+guessed at here.
+
+\textbf{RQ4 (what risks are left).} The clearest weakness is a
+\textbf{relay attack}: because the sound channel only shows that a phone
+is probably nearby, not that it definitely is, an attacker who can stream
+the sound from the victim's laptop to the victim's phone over the
+internet, instead of through the air, could trick the system into
+approving a login without ever being physically close. Echo does not
+currently defend against this. It was treated from the start as a known,
+accepted risk rather than a solved problem, because properly solving it
+needs very precise timing measurements that a web browser simply does not
+allow a developer to make. This is a real weakness, and it is presented
+as one, not played down. A second, smaller risk is an unlocked phone that
+has been stolen and is physically near the victim's laptop: because Echo
+does not currently require a fingerprint or face check on the phone
+immediately before signing (a feature that was planned but not finished
+in time), anyone holding an unlocked, registered phone near the laptop
+could approve a login. Both of these risks, and the reasoning for treating
+them as known limitations rather than blockers, are discussed further
+below.
+
+\section{Conclusions Against the Objectives}
+
+Measured against the seven objectives set out in
+Section~\ref{ch:introduction}, five were fully met: comparing why
+passwords fail against the existing passwordless options
+(Chapter~\ref{ch:literature}); the sound-based transmission layer with an
+audible backup (Section~\ref{sec:architecture}); the full server, covering
+sign-up, the one-time code system, signature checking, live updates, and
+account recovery (Chapter~\ref{ch:design}); the phone app with its own
+signing key (Chapter~\ref{ch:design}); and the automated test suite
+(Section~\ref{sec:testing}), which was not only built but was actually run
+for this report with a clean 31 out of 31 pass. The seventh objective,
+account recovery, was met in a changed form: an email link replaced the
+originally planned recovery-code system as the main way to recover an
+account, for the reasons given in Section~\ref{sec:design-evolution},
+while the original recovery-code system is still present in the code as a
+backup option. The sixth objective, testing across distance and noise, is
+the one genuinely unfinished item: the tool and the plan for doing it are
+built and ready (Section~\ref{sec:methodology-eval}), but the actual
+270-attempt data collection still needs to happen on the real
+demonstration hardware. Overall, the project delivers a working system
+whose cryptography is sound and has been properly tested, but whose
+real-world sound reliability is not yet backed by finished measurements,
+and that gap is this report's clearest limitation.
+
+\section{Limitations}
+
+Beyond the relay-attack and unlocked-phone risks already discussed, three
+more limitations are worth stating plainly. First, once finished, the
+real-world test will only describe one specific laptop and phone.
+Speaker and microphone quality varies a lot between different devices, so
+a result from the development machine should not be assumed to apply to
+every laptop and phone without further testing. Second, the phone side
+depends on the browser continuing to allow microphone access and running
+the app in the background the way the phone's operating system allows;
+iPhone's Safari browser is known to behave differently around background
+microphone access, and this was not fully solved within the time
+available for this project. Third, the system was built and tested as a
+single-user, single-phone-per-account demo; it does not yet have a proper
+way to register or remove more than one phone per account beyond the
+basic version already tested, which would be needed before the design
+could be considered ready for real, everyday users.
+
+\section{Recommendations and Further Work}
+\label{sec:further-work}
+
+The following are recommended as the next steps, in order of importance:
+
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{Finish the real-world sound test.} Run the full
+  270-attempt test described in Section~\ref{sec:methodology-eval} on the
+  real presentation hardware, fill in Table~\ref{tab:evalresults} with the
+  actual success rates and timing results, and update the RQ1 and RQ3
+  conclusions above to match the real numbers before final submission.
+  This is the single most important task left.
+  \item \textbf{Add a fingerprint or face check before signing.}
+  Requiring the phone to check the user's fingerprint or face right
+  before it signs a login closes the unlocked-phone risk described above.
+  This was already planned as the next priority but did not make it into
+  this build, and should be the first thing added if the project
+  continues.
+  \item \textbf{Look into simple ways to reduce the relay-attack risk.}
+  A full, certain fix is out of reach of a web browser, but two simpler
+  ideas are worth trying: timing how long the whole process takes as a
+  rough distance signal, and comparing a short recording of background
+  noise from both the laptop and the phone to check they are likely in the
+  same room. Neither would fully solve the problem alone, but either would
+  make a relay attack harder than it currently is.
+  \item \textbf{Support more than one phone per account, with proper
+  management.} The database already allows more than one phone per user;
+  building a proper screen for registering and removing phones would move
+  the project from a single-user demo toward something closer to a real,
+  usable feature.
+  \item \textbf{Build a proper phone app.} A dedicated Android or iPhone
+  app, using the phone's own secure hardware for storing the signing key,
+  would remove the web browser as a weak point for key storage entirely.
+  Right now the key cannot be exported, but it still lives inside the
+  browser's storage rather than in dedicated secure hardware built for
+  exactly this purpose.
+\end{enumerate}
+
+\section{Closing Remarks}
+
+The main idea this project tested, that a nearby, high-pitched sound
+combined with strong cryptography can be a workable passwordless login
+method, holds up well on the cryptography side. Its resistance to replay
+attacks, forged signatures, and phishing is not just designed on paper but
+has been properly tested and confirmed with a clean, fully passing set of
+automated tests. Its real-world sound reliability is meant to be tested
+with the same level of care, and the honest state of this report is that
+the real-world data needed to fully back that up still needs to be
+collected. Stating that gap openly fits the wider goal of this project:
+to make every part of a passwordless login, what is secret, what is
+public, what expires, and what still needs to be proven, clear and
+checkable, instead of hidden behind one company's closed system.

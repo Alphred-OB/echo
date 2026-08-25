@@ -1,0 +1,110 @@
+% ============================================================
+% FRONT MATTER: Title page, Abstract, Acknowledgements, Dedication, Keywords
+% ============================================================
+
+\begin{titlepage}
+\centering
+\vspace*{0.5cm}
+
+\includegraphics[width=3.2cm]{umat-logo.png}\par
+\vspace{0.4cm}
+{\large\bfseries UNIVERSITY OF MINES AND TECHNOLOGY (UMaT), TARKWA\par}
+{\normalsize DEPARTMENT OF CYBERSECURITY AND INFORMATION SYSTEMS\par}
+
+\vspace{2.2cm}
+
+{\Large\bfseries Echo: Ultrasonic Passwordless Authentication for Web Applications\par}
+
+\vspace{2.0cm}
+
+{\large Boakye Alfred Osei\par}
+{\large FCM41.018.99.23\par}
+
+\vspace{1.8cm}
+
+{\normalsize BSc Cyber Security\par}
+{\normalsize Final Report\par}
+{\normalsize Department of Cybersecurity and Information Systems\par}
+{\normalsize Semester 2, Academic Year 2025/2026\par}
+
+\vfill
+
+{\small Submitted in partial fulfilment of the requirements for the award of
+Bachelor of Science in Cyber Security\par}
+
+\end{titlepage}
+
+\clearpage
+\pagenumbering{roman}
+
+% ---------------- Abstract ----------------
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Passwords are weak. People forget them, reuse them, and get them stolen
+through phishing. Newer methods, text codes, email links, QR codes, even
+passkeys, still make the user do something extra. This project builds and
+tests Echo, a login system that removes that extra step. A laptop plays a short sound through
+its speakers, too high-pitched for most people to hear. The user's phone
+picks up the sound, asks the user to approve the login with a tap, and
+sends back a digital signature that only that phone can produce. The
+server checks the signature and logs the laptop in. Nothing secret ever
+travels through the sound, and the phone's private signing key never
+leaves the phone. A set of 31 automated tests
+shows that a recorded and replayed login sound, and a forged signature,
+are both correctly rejected. A second set of tests, still to be run on
+real hardware, will check how well the sound carries at different
+distances and noise levels. Echo works well and resists phishing, but it
+is not perfect: an attacker who can relay the sound over the internet,
+instead of being physically close, could still get around it.
+
+\clearpage
+
+% ---------------- Acknowledgements ----------------
+\chapter*{Acknowledgements}
+\addcontentsline{toc}{chapter}{Acknowledgements}
+
+I want to thank my supervisor, Miss Audrey Asante, for her guidance,
+patience, and honest feedback while I designed, built, and tested this
+project. Her comments at every meeting shaped both the direction of the
+system and how carefully it was tested and written up.
+
+I also want to thank the lecturers in the Department of Cybersecurity and
+Information Systems at the University of Mines and Technology. What I
+learned in their courses, on cryptography, web security, ethical hacking,
+and network security, is used directly in this project. Thank you also to
+my classmates who lent me their phones and their patience during distance
+and noise tests.
+
+Finally, thank you to my family and friends for their support this
+semester.
+
+\clearpage
+
+% ---------------- Dedication ----------------
+\chapter*{Dedication}
+\addcontentsline{toc}{chapter}{Dedication}
+
+\vspace{2cm}
+\begin{center}
+\textit{To my friends, who tested Echo again and again and gave me the honest feedback that made it better.}
+\end{center}
+
+\clearpage
+
+% ---------------- Keywords ----------------
+\chapter*{Keywords}
+\addcontentsline{toc}{chapter}{Keywords}
+
+\begin{itemize}[nosep]
+\item Passwordless authentication
+\item Acoustic data transmission
+\item ECDSA public-key cryptography
+\item WebAuthn and FIDO2
+\item Near-ultrasonic communication
+\item Replay attack prevention
+\item Web application security
+\item Proximity-based authentication
+\end{itemize}
+
+\clearpage

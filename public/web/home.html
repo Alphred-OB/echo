@@ -395,23 +395,21 @@
 
   #stepCaption { text-align: center; color: #334155; font-size: 0.98rem; font-weight: 600; min-height: 2.8em; max-width: 620px; margin: 0 auto; line-height: 1.6; }
 
-  /* Prior art / how Echo differs */
-  .prior-art-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0 20px; }
-  .prior-art-grid.two-col { grid-template-columns: repeat(2, 1fr); max-width: 720px; margin-left: auto; margin-right: auto; }
-  .prior-art-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; box-shadow: var(--shadow); transition: border-color 0.3s, transform 0.3s; }
-  .prior-art-card:hover { border-color: rgba(37, 99, 235, 0.2); transform: translateY(-2px); }
-  .prior-art-card .pa-name { display: flex; flex-direction: column; gap: 4px; font-weight: 800; font-size: 1.02rem; color: var(--text); margin-bottom: 8px; }
-  .prior-art-card .pa-tag { font-size: var(--fs-tiny); font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
-  .prior-art-card p { margin: 0; color: var(--muted); font-size: var(--fs-small); line-height: 1.6; }
+  /* Prior art strip — condensed single-line comparison, not a full grid */
+  .prior-art-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; background: var(--accent-soft); border: 1px solid rgba(37, 99, 235, 0.16); border-radius: var(--r-lg); padding: 20px 28px; max-width: 780px; margin: 28px auto 0; }
+  .prior-art-strip .pa-point { display: flex; align-items: center; gap: 10px; font-size: var(--fs-small); color: var(--muted); }
+  .prior-art-strip .pa-point b { color: var(--text); font-weight: 700; }
+  .prior-art-strip .pa-point .ic { color: var(--accent); flex-shrink: 0; width: 16px; height: 16px; }
 
-  .pa-diff { background: var(--accent-soft); border: 1px solid rgba(37, 99, 235, 0.16); border-radius: var(--r-lg); padding: 28px 30px; }
-  .pa-diff h3 { margin: 0 0 16px; font-size: 1.1rem; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 10px; }
-  .pa-diff h3 .ic { color: var(--accent); }
-  .pa-diff ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; }
-  .pa-diff li { position: relative; padding-left: 24px; color: var(--muted); font-size: var(--fs-small); line-height: 1.65; }
-  .pa-diff li::before { content: ''; position: absolute; left: 0; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-  .pa-diff li b { color: var(--text); font-weight: 700; }
-  @media (max-width: 768px) { .prior-art-grid { grid-template-columns: 1fr; } }
+  /* What's New section */
+  .whats-new-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 32px; }
+  .wn-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow); transition: border-color 0.3s, transform 0.3s; }
+  .wn-card:hover { border-color: rgba(37, 99, 235, 0.22); transform: translateY(-2px); }
+  .wn-card .wn-icon { width: 42px; height: 42px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; border: 1px solid rgba(37, 99, 235, 0.14); }
+  .wn-card h4 { margin: 0 0 8px; font-size: 0.98rem; font-weight: 800; color: var(--text); }
+  .wn-card p { margin: 0; color: var(--muted); font-size: var(--fs-small); line-height: 1.6; }
+  @media (max-width: 900px) { .whats-new-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .whats-new-grid { grid-template-columns: 1fr; } }
 
   /* FAQ Split Section Styling (Matching Reference Screenshot Design) */
   .faq-container-grid {
@@ -609,6 +607,7 @@
     <span class="links" id="navLinks">
       <a class="link" href="home.html#how">How it works</a>
       <a class="link" href="technology.html">Technology</a>
+      <a class="link" href="home.html#apps">Get App</a>
       <a class="link" href="home.html#security">Security</a>
       <a class="link" href="login.html">Sign in</a>
       <a class="link primary" href="signup.html">Get started</a>
@@ -677,109 +676,30 @@
     </div>
   </header>
 
-  <!-- Bento-Style Features Showcase Grid (No Technical Jargon) -->
-  <section class="sec rv" id="features">
-    <span class="kicker">Core Capabilities</span>
-    <h2>Simple, fast, and completely password-free.</h2>
-    <p class="lead">Echo pairs physical sound proximity with personal phone approval to protect your account without passwords.</p>
-    
-    <div class="bento-showcase">
-      <!-- Tile 1: Left Tall Card (Deep Navy) -->
-      <div class="b-card blue-deep tall-left">
-        <div>
-          <h3>Step-By-Step Sound Sign-In</h3>
-          <p>Click sign in on your computer, your phone hears the silent signal, and you confirm with a single tap.</p>
-        </div>
-        <div class="bento-phone-frame">
-          <div class="bento-phone-notch"></div>
-          <div class="bento-phone-screen">
-            <div class="bento-phone-header">
-              <svg class="ic" style="width: 16px; height: 16px;"><use href="#i-shield"/></svg>
-              <span>ECHO APP</span>
-            </div>
-            <div style="font-size: 0.65rem; color: #64748b; margin-bottom: 6px;">Connected Device</div>
-            <div style="font-size: 0.82rem; font-weight: 800; color: #0f172a; margin-bottom: 10px;">Security Key Active</div>
-            <div class="bento-phone-banner">
-              <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85;">Sound Channel</div>
-              <h5>Silent Code Received</h5>
-              <p>Listening for sign-in signal near your computer...</p>
-            </div>
-            <div style="font-size: 0.65rem; font-weight: 700; color: #64748b; margin-bottom: 6px;">Actions</div>
-            <div class="bento-phone-actions">
-              <div class="bento-phone-btn">
-                <svg class="ic" style="width: 12px; height: 12px;"><use href="#i-check"/></svg>
-                Approve
-              </div>
-              <div class="bento-phone-btn">
-                <svg class="ic" style="width: 12px; height: 12px;"><use href="#i-key"/></svg>
-                My Keys
-              </div>
-            </div>
-          </div>
-        </div>
+  <section class="sec rv" id="whats-new">
+    <span class="kicker">What's new</span>
+    <h2>Recently shipped</h2>
+    <p class="lead">Echo keeps evolving. Here's what's landed most recently.</p>
+    <div class="whats-new-grid">
+      <div class="wn-card">
+        <div class="wn-icon"><svg class="ic"><use href="#i-shield"/></svg></div>
+        <h4>Native phone app</h4>
+        <p>A dedicated Echo Key app for Android — faster listening, richer haptics, and a home-screen icon instead of a browser tab.</p>
       </div>
-
-      <!-- Tile 2: Top Right Wide Card (Light Blue) -->
-      <div class="b-card blue-light top-wide">
-        <div class="bento-portal-layout">
-          <div class="bento-portal-text">
-            <h3>Device & Key Management</h3>
-            <p>See all your connected devices in one place, review recent logins, and remove lost phones instantly.</p>
-          </div>
-          <div class="bento-portal-mock">
-            <div class="bento-portal-inner">
-              <div class="bento-portal-title">Echo Console</div>
-              <div class="bento-portal-heading">MacBook Pro · Verified</div>
-              <div class="bento-portal-status-box">
-                <div>
-                  <span class="bento-portal-status-title">Status ◌</span>
-                  <span class="bento-portal-status-val">Signed In</span>
-                </div>
-                <span class="bento-portal-badge">Active</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="wn-card">
+        <div class="wn-icon"><svg class="ic"><use href="#i-volume"/></svg></div>
+        <h4>Live handshake confirmation</h4>
+        <p>Watch the connection lock in with a real-time animation the instant your phone and computer agree on the same code.</p>
       </div>
-
-      <!-- Tile 3: Middle Bottom Card (Vibrant Royal Blue) -->
-      <div class="b-card blue-vibrant bottom-left-wide">
-        <div>
-          <h3>30-Second Security Codes</h3>
-          <p>Security codes expire automatically after 30 seconds, preventing anyone from reusing old sound recordings.</p>
-        </div>
-        <div class="bento-timer-box" style="margin-top: 16px; max-width: 100%;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div class="bento-timer-icon" style="margin-bottom: 0; flex-shrink: 0;">
-              <svg class="ic" style="width: 18px; height: 18px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <div>
-              <div class="bento-timer-title" style="font-size: 0.85rem; margin-bottom: 1px;">30s Auto Expiry</div>
-              <div class="bento-timer-desc" style="font-size: 0.72rem;">Instant deletion after verification</div>
-            </div>
-          </div>
-        </div>
+      <div class="wn-card">
+        <div class="wn-icon"><svg class="ic"><use href="#i-mail"/></svg></div>
+        <h4>Email link recovery</h4>
+        <p>Lost your phone? A single-use magic link sent to your inbox gets you back in — no backup password to remember or leak.</p>
       </div>
-
-      <!-- Tile 4: Right Bottom Card (Light Blue) -->
-      <div class="b-card blue-light bottom-right">
-        <div>
-          <h3>Password-Free Protection</h3>
-          <p>No passwords to type, steal, keylog, or guess. Complete peace of mind on every sign-in.</p>
-        </div>
-        <div class="bento-ring-widget" style="margin-top: 16px; display: flex; align-items: center; justify-content: space-between; text-align: left; padding: 10px 14px;">
-          <div>
-            <div class="bento-ring-title" style="margin-bottom: 2px;">Security Level</div>
-            <div style="font-size: 0.75rem; font-weight: 800; color: #1e3a8a;">100% Protection</div>
-          </div>
-          <div style="position: relative; width: 46px; height: 46px; flex-shrink: 0;">
-            <svg class="bento-ring-svg" viewBox="0 0 70 70" style="width: 46px; height: 46px;">
-              <circle class="bento-ring-bg" cx="35" cy="35" r="28" stroke-width="8"/>
-              <circle class="bento-ring-fill" cx="35" cy="35" r="28" stroke-width="8" stroke-dasharray="176" stroke-dashoffset="0"/>
-            </svg>
-            <div class="bento-ring-val" style="font-size: 0.68rem;">100%</div>
-          </div>
-        </div>
+      <div class="wn-card">
+        <div class="wn-icon"><svg class="ic"><use href="#i-moon"/></svg></div>
+        <h4>Dark mode</h4>
+        <p>A full dark theme across the site and dashboard, matched to your system preference or toggled manually.</p>
       </div>
     </div>
   </section>
@@ -804,9 +724,9 @@
   </section>
 
   <section class="sec rv" id="how">
-    <span class="kicker">Symmetric protocol</span>
+    <span class="kicker">How it works</span>
     <h2>Four steps, zero typing</h2>
-    <p class="lead">Watch a sign-in happen. Click any step below to visualize the process.</p>
+    <p class="lead">Click a step to see it happen.</p>
     <div class="card flow">
       <svg id="scene" viewBox="0 0 640 250" role="img" aria-label="Diagram of the Echo sign-in flow">
         <!-- Background Grid inside SVG for technical dashboard aesthetic -->
@@ -897,28 +817,12 @@
   </section>
 
   <section class="sec rv" id="prior-art">
-    <span class="kicker">Related Work</span>
+    <span class="kicker">Related work</span>
     <h2>Sound-based login isn't new. Here's what we changed.</h2>
-    <p class="lead">Ultrasonic and audio-based authentication has been tried before. Echo builds on that idea with modern browser cryptography instead of trust in the sound alone.</p>
-
-    <div class="prior-art-grid two-col">
-      <div class="prior-art-card">
-        <div class="pa-name">SlickLogin <span class="pa-tag">2013 · Acquired by Google, 2014</span></div>
-        <p>The closest prior art — ultrasonic tones between phone and computer to confirm identity. Predates the WebCrypto API, and never shipped as a public product after the acquisition.</p>
-      </div>
-      <div class="prior-art-card">
-        <div class="pa-name">"Sound-Proof" <span class="pa-tag">USENIX Security, 2015</span></div>
-        <p>An academic two-factor scheme that compares <em>ambient</em> background noise recorded by both devices to prove proximity — no signal is generated, unlike Echo.</p>
-      </div>
-    </div>
-
-    <div class="pa-diff">
-      <h3><svg class="ic"><use href="#i-shield-check"/></svg> What's actually different</h3>
-      <ul>
-        <li><b>Sound is the transport, not the trust.</b> The near-ultrasonic tone only carries a one-time nonce. The real proof is a P-256 ECDSA signature computed on-device with a WebCrypto private key that's non-exportable by design.</li>
-        <li><b>Browser-native, no app or SDK.</b> WebCrypto wasn't standardized when SlickLogin launched. It makes real on-device asymmetric key management possible from a plain web page — nothing to install.</li>
-        <li><b>Open protocol.</b> Built on ggwave, an open-source data-over-sound library, not a proprietary or licensed stack.</li>
-      </ul>
+    <p class="lead">Prior art like SlickLogin (2013) and academic ambient-noise schemes proved the concept. Echo adds the piece they didn't have.</p>
+    <div class="prior-art-strip">
+      <span class="pa-point"><svg class="ic"><use href="#i-shield-check"/></svg> <b>Sound carries the code, not the trust</b> — the real proof is an on-device P-256 signature</span>
+      <span class="pa-point"><svg class="ic"><use href="#i-lock"/></svg> <b>Nothing to install</b> — WebCrypto key management, straight from the browser</span>
     </div>
   </section>
 
@@ -990,6 +894,53 @@
             By default, Echo uses near-ultrasonic frequencies above 17 kHz that human ears cannot hear. If your device speaker prefers audible frequencies, you can also toggle audible mode anytime.
           </div>
         </details>
+      </div>
+    </div>
+  <!-- ── Mobile Authenticator Download Section ── -->
+  <section class="sec rv" id="apps" style="text-align: center;">
+    <span class="kicker">Mobile Authenticator</span>
+    <h2>Turn your phone into a physical security key</h2>
+    <p class="lead">Install our native Android APK for hardware haptics or launch the instant Web PWA directly in your browser.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 780px; margin: 32px auto 0; text-align: left;">
+      <!-- Native Android APK Card -->
+      <div class="card" style="padding: 26px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; background: var(--surface);">
+        <div>
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+            <svg class="ic" style="width: 22px; height: 22px;"><use href="#i-phone"/></svg>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <h3 style="font-size: 18px; font-weight: 800; margin: 0;">Android Native App</h3>
+            <span style="font-size: 11px; font-weight: 700; background: #ecfdf5; color: #059669; padding: 3px 8px; border-radius: 99px;">.APK Native</span>
+          </div>
+          <p style="font-size: 13.5px; color: var(--muted); line-height: 1.5; margin-bottom: 22px;">
+            Native ultrasound FFT engine, tactile haptic feedback, and fast 6-digit PIN pairing for Android.
+          </p>
+        </div>
+        <a href="/echo-authenticator.apk" download="echo-authenticator.apk" class="btn" style="text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg class="ic" style="width: 18px; height: 18px;"><use href="#i-shield"/></svg>
+          Download Android APK
+        </a>
+      </div>
+
+      <!-- Instant Web PWA Card -->
+      <div class="card" style="padding: 26px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; background: var(--surface);">
+        <div>
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+            <svg class="ic" style="width: 22px; height: 22px;"><use href="#i-volume"/></svg>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <h3 style="font-size: 18px; font-weight: 800; margin: 0;">Instant Web PWA</h3>
+            <span style="font-size: 11px; font-weight: 700; background: var(--accent-soft); color: var(--accent); padding: 3px 8px; border-radius: 99px;">iOS & Desktop</span>
+          </div>
+          <p style="font-size: 13.5px; color: var(--muted); line-height: 1.5; margin-bottom: 22px;">
+            No downloads or store installs needed. Runs directly in Safari, Chrome, and Edge with full home screen support.
+          </p>
+        </div>
+        <a href="/app/" target="_blank" class="btn ghost" style="text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid var(--accent); color: var(--accent); font-weight: 700;">
+          <svg class="ic" style="width: 18px; height: 18px;"><use href="#i-arrow-right"/></svg>
+          Launch Web PWA
+        </a>
       </div>
     </div>
   </section>

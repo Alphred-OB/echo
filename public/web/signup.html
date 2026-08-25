@@ -194,6 +194,12 @@
         <div class="qr-card" id="qrBox"></div>
       </div>
 
+      <!-- 6-Digit Manual Pairing Code -->
+      <div style="margin: 12px auto 14px; max-width: 260px; padding: 10px 14px; background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; text-align: center;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Or enter code on your phone</div>
+        <div id="pairCodeDisplay" style="font-size: 24px; font-weight: 900; font-family: 'JetBrains Mono', monospace; letter-spacing: 4px; color: var(--accent);">··· ···</div>
+      </div>
+
       <!-- Clean Live Status Indicator -->
       <div style="text-align: center;">
         <div class="live-status" id="waitStatus">
@@ -202,8 +208,20 @@
         </div>
       </div>
 
+      <!-- App Download / PWA Launch Quick Links -->
+      <div style="margin: 16px auto 0; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+        <a href="/echo-authenticator.apk" download="echo-authenticator.apk" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; background: #ecfdf5; color: #059669; border-radius: 99px; text-decoration: none; border: 1px solid rgba(5, 150, 105, 0.2);">
+          <svg class="ic" style="width: 14px; height: 14px;"><use href="#i-phone"/></svg>
+          Download Android APK
+        </a>
+        <a href="/app/" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; background: var(--accent-soft); color: var(--accent); border-radius: 99px; text-decoration: none; border: 1px solid rgba(37, 99, 235, 0.2);">
+          <svg class="ic" style="width: 14px; height: 14px;"><use href="#i-arrow-right"/></svg>
+          Open Web PWA
+        </a>
+      </div>
+
       <!-- Subtle Action Links -->
-      <div class="subtle-actions" id="pairActions">
+      <div class="subtle-actions" id="pairActions" style="margin-top: 14px;">
         <button type="button" class="btn-link" id="btnCopy" onclick="copyEnrollLink()" style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;">
           <span id="copyLabel">Copy pairing link</span>
         </button>
@@ -297,6 +315,9 @@ async function signup() {
     }
 
     enrollToken = data.enrollToken;
+    if (data.pairCode) {
+      $('pairCodeDisplay').textContent = `${data.pairCode.slice(0, 3)} ${data.pairCode.slice(3)}`;
+    }
     const origin = (location.protocol === 'file:' || location.origin === 'null' || !location.origin)
       ? 'http://localhost:8000'
       : `${location.protocol}//${location.host}`;
