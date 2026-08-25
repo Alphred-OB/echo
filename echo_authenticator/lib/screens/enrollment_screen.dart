@@ -298,14 +298,34 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
                             onPressed: _isProcessing
                                 ? null
                                 : () {
-                                    final token = _tokenController.text.trim();
-                                    final url = _urlController.text.trim();
-                                    if (token.isEmpty) {
-                                      setState(() => _errorMessage = 'Please enter an enroll token');
-                                      return;
+                                String rawToken = _tokenController.text.trim();
+                                String serverUrl = _urlController.text.trim().isEmpty ? 'http://localhost:8000' : _urlController.text.trim();
+
+                                if (rawToken.isEmpty) {
+                                  setState(() => _errorMessage = 'Please enter an enroll token');
+                                  return;
+                                }
+
+                                // Smart extraction if full link or snippet was pasted
+                                if (rawToken.contains('token=')) {
+                                  final parts = rawToken.split('token=');
+                                  if (parts.length > 1) {
+                                    rawToken = parts[1].split('&').first;
+                                  }
+                                }
+                                if (rawToken.startsWith('http://') || rawToken.startsWith('https://')) {
+                                  try {
+                                    final uri = Uri.parse(rawToken);
+                                    final extracted = uri.queryParameters['token'];
+                                    if (extracted != null && extracted.isNotEmpty) {
+                                      rawToken = extracted;
+                                      serverUrl = '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
                                     }
-                                    _performEnrollment(serverUrl: url, enrollToken: token);
-                                  },
+                                  } catch (_) {}
+                                }
+
+                                _performEnrollment(serverUrl: serverUrl, enrollToken: rawToken);
+                              },
                             child: _isProcessing
                                 ? const SizedBox(
                                     width: 20,

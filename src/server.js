@@ -47,8 +47,15 @@ app.set('trust proxy', 1);
 // Remove framework fingerprint header
 app.disable('x-powered-by');
 
-// HTTP security headers — prevents clickjacking, MIME-sniffing, data leakage
-app.use((_req, res, next) => {
+// HTTP security & CORS headers
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
