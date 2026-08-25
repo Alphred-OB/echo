@@ -24,21 +24,36 @@ class ListeningScreen extends StatefulWidget {
   State<ListeningScreen> createState() => _ListeningScreenState();
 }
 
-class _ListeningScreenState extends State<ListeningScreen> {
+class _ListeningScreenState extends State<ListeningScreen>
+    with SingleTickerProviderStateMixin {
   final AudioListenerService _audioService = AudioListenerService();
   StreamSubscription<String>? _nonceSub;
   StreamSubscription<List<double>>? _spectrumSub;
+
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   List<double> _currentBins = List.filled(36, 0.04);
   bool _isListening = false;
   bool _hasUltrasound = false;
   Timer? _ultrasoundFlashTimer;
+  bool _isButtonPressed = false;
 
   final List<String> _activityLog = [];
 
   @override
   void initState() {
     super.initState();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
+
+    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.12).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
     _startListeningAuto();
 
     _spectrumSub = _audioService.onSpectrumUpdate.listen((bins) {
@@ -54,6 +69,7 @@ class _ListeningScreenState extends State<ListeningScreen> {
 
   @override
   void dispose() {
+    _pulseController.dispose();
     _nonceSub?.cancel();
     _spectrumSub?.cancel();
     _ultrasoundFlashTimer?.cancel();
@@ -69,7 +85,7 @@ class _ListeningScreenState extends State<ListeningScreen> {
   }
 
   Future<void> _toggleListen() async {
-    HapticFeedback.selectionClick();
+    HapticFeedback.mediumImpact();
     if (_isListening) {
       await _audioService.stopListening();
       if (mounted) setState(() => _isListening = false);
@@ -80,9 +96,12 @@ class _ListeningScreenState extends State<ListeningScreen> {
   }
 
   Future<void> _handleNonceReceived(String nonce) async {
+    // 📳 Tactile Ultrasound Capture Bump
+    HapticFeedback.heavyImpact();
+
     setState(() => _hasUltrasound = true);
     _ultrasoundFlashTimer?.cancel();
-    _ultrasoundFlashTimer = Timer(const Duration(milliseconds: 1200), () {
+    _ultrasoundFlashTimer = Timer(const Duration(milliseconds: 1400), () {
       if (mounted) setState(() => _hasUltrasound = false);
     });
 
@@ -94,9 +113,13 @@ class _ListeningScreenState extends State<ListeningScreen> {
     );
 
     if (!isMine) {
-      debugPrint('[Echo] Nonce $nonce ignored — not for this user.');
+      debugPrint('[Echo] Nonce $nonce ignored — belongs to another session.');
       return;
     }
+
+    // Secondary haptic alert for match code prompt
+    await Future.delayed(const Duration(milliseconds: 100));
+    HapticFeedback.mediumImpact();
 
     // 2. Match code derivation
     final matchCode = CryptoService.computeMatchCode(nonce);
@@ -111,13 +134,17 @@ class _ListeningScreenState extends State<ListeningScreen> {
           nonce: nonce,
           matchCode: matchCode,
           credentials: widget.credentials,
-          onDismiss: () => Navigator.of(ctx).pop(),
+          onDismiss: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(ctx).pop();
+          },
           onApproved: () {
+            HapticFeedback.heavyImpact();
             Navigator.of(ctx).pop();
             setState(() {
               _activityLog.insert(
                 0,
-                'Sign-in approved · Code $matchCode · ${TimeOfDay.now().format(context)}',
+                'Approved · Code $matchCode · ${TimeOfDay.now().format(context)}',
               );
             });
           },
@@ -127,6 +154,7 @@ class _ListeningScreenState extends State<ListeningScreen> {
   }
 
   void _showUnpairDialog() {
+    HapticFeedback.lightImpact();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -136,11 +164,15 @@ class _ListeningScreenState extends State<ListeningScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              Navigator.of(ctx).pop();
+            },
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
+              HapticFeedback.heavyImpact();
               Navigator.of(ctx).pop();
               await StorageService.clear();
               widget.onUnpaired();
@@ -166,10 +198,10 @@ class _ListeningScreenState extends State<ListeningScreen> {
             EchoWaveIndicator(height: 16),
             SizedBox(width: 8),
             Text(
-              'echo key',
+              'echo',
               style: TextStyle(
                 fontWeight: FontWeight.w900,
-                fontSize: 19,
+                fontSize: 21,
                 letterSpacing: -0.5,
               ),
             ),
@@ -184,134 +216,219 @@ class _ListeningScreenState extends State<ListeningScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ── Minimalist User & Status Header ──
+              // ── Minimalist User Badge ──
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isDark ? EchoTheme.surfaceDark : EchoTheme.surfaceLight,
-                  borderRadius: BorderRadius.circular(EchoTheme.rMd),
+                  color: isDark ? EchoTheme.surfaceDark : Colors.white,
+                  borderRadius: BorderRadius.circular(99),
                   border: Border.all(
                     color: isDark ? EchoTheme.borderDark : EchoTheme.borderLight,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 10,
-                      height: 10,
+                      width: 8,
+                      height: 8,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _isListening ? EchoTheme.ok : EchoTheme.dimLight,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.credentials.username,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.credentials.username,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
+                    const SizedBox(width: 4),
                     Text(
-                      _isListening ? 'Listening' : 'Paused',
+                      '· ${widget.credentials.deviceName}',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _isListening ? EchoTheme.ok : EchoTheme.dimLight,
+                        color: isDark ? EchoTheme.mutedDark : EchoTheme.mutedLight,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
 
-              // ── Live Ultrasound Spectrum ──
+              const Spacer(flex: 1),
+
+              // ── Interactive Central Acoustic Pulse Core ──
+              GestureDetector(
+                onTapDown: (_) {
+                  setState(() => _isButtonPressed = true);
+                  HapticFeedback.lightImpact();
+                },
+                onTapUp: (_) {
+                  setState(() => _isButtonPressed = false);
+                  _toggleListen();
+                },
+                onTapCancel: () {
+                  setState(() => _isButtonPressed = false);
+                },
+                child: AnimatedScale(
+                  scale: _isButtonPressed ? 0.92 : 1.0,
+                  duration: const Duration(milliseconds: 140),
+                  curve: Curves.easeOutCubic,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Ambient Breathing Pulse Ring
+                      if (_isListening)
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            return Container(
+                              width: 190 * _pulseAnimation.value,
+                              height: 190 * _pulseAnimation.value,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: (_hasUltrasound
+                                        ? EchoTheme.accent
+                                        : EchoTheme.accent)
+                                    .withValues(
+                                        alpha: _hasUltrasound ? 0.22 : 0.06),
+                              ),
+                            );
+                          },
+                        ),
+
+                      // Outer Static Ring
+                      Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _isListening
+                              ? (_hasUltrasound
+                                  ? EchoTheme.accent.withValues(alpha: 0.15)
+                                  : EchoTheme.accentSoft)
+                              : const Color(0xFFF1F5F9),
+                          border: Border.all(
+                            color: _isListening
+                                ? (_hasUltrasound
+                                    ? EchoTheme.accent
+                                    : EchoTheme.accent.withValues(alpha: 0.25))
+                                : const Color(0xFFE2E8F0),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+
+                      // Core Button Center
+                      Container(
+                        width: 104,
+                        height: 104,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _isListening ? EchoTheme.accent : const Color(0xFF64748B),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_isListening ? EchoTheme.accent : const Color(0xFF64748B))
+                                  .withValues(alpha: 0.35),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Icon(
+                            _isListening ? Icons.mic_rounded : Icons.mic_off_rounded,
+                            color: Colors.white,
+                            size: 44,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Status Text
+              Text(
+                _hasUltrasound
+                    ? 'Acoustic Nonce Detected!'
+                    : (_isListening ? 'Listening for sound…' : 'Listening Paused'),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: _hasUltrasound
+                      ? EchoTheme.accent
+                      : (_isListening
+                          ? (isDark ? EchoTheme.textDark : EchoTheme.textLight)
+                          : EchoTheme.dimLight),
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              Text(
+                _isListening
+                    ? 'Hold phone near your computer screen'
+                    : 'Tap the button to start listening',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? EchoTheme.mutedDark : EchoTheme.mutedLight,
+                ),
+              ),
+
+              const Spacer(flex: 1),
+
+              // ── Live Micro Spectrum Bar ──
               LiveSpectrumWidget(
                 bins: _currentBins,
                 isListening: _isListening,
                 hasUltrasound: _hasUltrasound,
               ),
-              const SizedBox(height: 18),
 
-              // ── Toggle Listening Button ──
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _toggleListen,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isListening ? EchoTheme.bad : EchoTheme.ok,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(EchoTheme.rMd),
-                    ),
-                  ),
-                  icon: Icon(
-                    _isListening ? Icons.mic_off_rounded : Icons.mic_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  label: Text(
-                    _isListening ? 'Stop Listening' : 'Start Listening',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 16),
 
-              // ── Activity History ──
-              if (_activityLog.isNotEmpty) ...[
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'RECENT ACTIVITY',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
-                      color: isDark ? EchoTheme.dimDark : EchoTheme.dimLight,
+              // ── Recent Activity Pill ──
+              if (_activityLog.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? EchoTheme.surfaceDark : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDark ? EchoTheme.borderDark : EchoTheme.borderLight,
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Column(
-                  children: _activityLog.map((log) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isDark ? EchoTheme.surfaceDark : EchoTheme.surfaceLight,
-                        borderRadius: BorderRadius.circular(EchoTheme.rSm),
-                        border: Border.all(
-                          color: isDark ? EchoTheme.borderDark : EchoTheme.borderLight,
-                        ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_rounded,
+                          color: EchoTheme.ok, size: 15),
+                      const SizedBox(width: 8),
+                      Text(
+                        _activityLog.first,
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle_rounded, color: EchoTheme.ok, size: 16),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              log,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                    ],
+                  ),
                 ),
-              ],
+
+              const SizedBox(height: 8),
             ],
           ),
         ),
