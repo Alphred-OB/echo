@@ -68,8 +68,7 @@ passwordless Auth/
 │   │   ├── home.html               # Main marketing / landing page
 │   │   ├── signup.html             # Account creation & QR-based enrollment wizard
 │   │   ├── login.html              # Login portal (ultrasonic sender & WS client)
-│   │   ├── dashboard.html          # Protected user dashboard & device management
-│   │   └── technology.html         # Technical architecture explainer page
+│   │   └── dashboard.html          # Protected user dashboard & device management
 │   ├── phone/                      # Mobile Progressive Web App (PWA)
 │   │   ├── phone.html              # Mobile key interface (acoustic listener & signer)
 │   │   ├── manifest.webmanifest    # PWA installation manifest
