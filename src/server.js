@@ -322,6 +322,32 @@ app.post('/api/login/verify', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Step 2b: the phone explicitly denies the login request
+app.post('/api/login/deny', (req, res) => {
+  const { nonce, deviceId } = req.body || {};
+  if (!nonce) {
+    return res.status(400).json({ error: 'nonce required' });
+  }
+
+  const ls = db.prepare('SELECT * FROM login_sessions WHERE nonce = ?').get(String(nonce));
+  if (!ls) return res.status(404).json({ error: 'unknown nonce' });
+
+  // Mark session as denied and burn nonce
+  db.prepare("UPDATE login_sessions SET status = 'denied', used = 1 WHERE id = ?").run(ls.id);
+
+  if (deviceId) {
+    const device = db.prepare('SELECT user_id FROM devices WHERE id = ?').get(String(deviceId));
+    if (device) {
+      logLogin(device.user_id, 'sound', deviceId, false, 'user denied on mobile app');
+    }
+  }
+
+  // Notify laptop WebSocket immediately so it stops sound playback and shows denied status
+  notifyLaptop(ls.id, { type: 'denied', reason: 'Authentication was denied on your mobile device' });
+
+  res.json({ ok: true });
+});
+
 // Step 3: the laptop exchanges the one-time claim token for a session cookie
 // Intentionally public: laptop exchanges the claim token for a session cookie
 app.post('/api/session/claim', (req, res) => {

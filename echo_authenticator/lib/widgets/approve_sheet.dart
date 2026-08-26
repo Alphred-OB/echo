@@ -12,6 +12,7 @@ class ApproveSheet extends StatefulWidget {
   final DeviceCredentials credentials;
   final VoidCallback onDismiss;
   final VoidCallback onApproved;
+  final VoidCallback onDenied;
 
   const ApproveSheet({
     super.key,
@@ -20,6 +21,7 @@ class ApproveSheet extends StatefulWidget {
     required this.credentials,
     required this.onDismiss,
     required this.onApproved,
+    required this.onDenied,
   });
 
   @override
@@ -28,7 +30,7 @@ class ApproveSheet extends StatefulWidget {
 
 class _ApproveSheetState extends State<ApproveSheet> with SingleTickerProviderStateMixin {
   bool _isSigning = false;
-  bool _isSuccess = false;
+  bool _isDenying = false;
   String? _errorMessage;
 
   late AnimationController _springController;
@@ -58,8 +60,27 @@ class _ApproveSheetState extends State<ApproveSheet> with SingleTickerProviderSt
     super.dispose();
   }
 
+  Future<void> _handleDeny() async {
+    if (_isSigning || _isDenying) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() => _isDenying = true);
+
+    // Fire and notify backend to cancel the waiting laptop session
+    ApiService.denyLogin(
+      serverUrl: widget.credentials.serverUrl,
+      nonce: widget.nonce,
+      deviceId: widget.credentials.deviceId,
+    );
+
+    // Immediately trigger Denied Screen
+    if (mounted) {
+      widget.onDenied();
+    }
+  }
+
   Future<void> _handleApprove() async {
-    if (_isSigning || _isSuccess) return;
+    if (_isSigning || _isDenying) return;
 
     HapticFeedback.mediumImpact();
     setState(() {
@@ -87,30 +108,27 @@ class _ApproveSheetState extends State<ApproveSheet> with SingleTickerProviderSt
       );
 
       if (result.success) {
-        HapticFeedback.heavyImpact();
-        setState(() {
-          _isSigning = false;
-          _isSuccess = true;
-        });
-
-        // Hold success state for 1.5s so the moment registers physically
-        await Future.delayed(const Duration(milliseconds: 1500));
+        // Immediately pop sheet and trigger Full-Screen Success Screen
         if (mounted) {
           widget.onApproved();
         }
       } else {
         HapticFeedback.vibrate();
-        setState(() {
-          _isSigning = false;
-          _errorMessage = result.error ?? 'Authentication rejected';
-        });
+        if (mounted) {
+          setState(() {
+            _isSigning = false;
+            _errorMessage = result.error ?? 'Authentication rejected';
+          });
+        }
       }
     } catch (e) {
       HapticFeedback.vibrate();
-      setState(() {
-        _isSigning = false;
-        _errorMessage = 'Signing failed: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isSigning = false;
+          _errorMessage = 'Signing failed: $e';
+        });
+      }
     }
   }
 
@@ -152,198 +170,156 @@ class _ApproveSheetState extends State<ApproveSheet> with SingleTickerProviderSt
             ),
             const SizedBox(height: 20),
 
-            if (_isSuccess) ...[
-              // ── Spring Connection Celebration State ──
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.2, end: 1.0),
-                duration: const Duration(milliseconds: 550),
-                curve: const Cubic(0.34, 1.56, 0.64, 1.0),
-                builder: (context, scale, child) {
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: 68,
-                      height: 68,
-                      decoration: BoxDecoration(
-                        color: EchoTheme.okSoft,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: EchoTheme.ok.withValues(alpha: 0.35),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.check_circle_rounded, color: EchoTheme.ok, size: 44),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Connected & Signed',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.w800,
-                  color: EchoTheme.ok,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Authenticated as ${widget.credentials.username}',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? EchoTheme.mutedDark : EchoTheme.mutedLight,
-                ),
-              ),
-              const SizedBox(height: 16),
-            ] else ...[
-              const EchoWaveIndicator(height: 18),
-              const SizedBox(height: 14),
+            const EchoWaveIndicator(height: 18),
+            const SizedBox(height: 14),
 
-              Text(
-                'Sign-in Request',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? EchoTheme.textDark : EchoTheme.textLight,
+            Text(
+              'Sign-in Request',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: isDark ? EchoTheme.textDark : EchoTheme.textLight,
+              ),
+            ),
+            const SizedBox(height: 4),
+
+            Text(
+              'Confirm the 2-digit code on your computer screen',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? EchoTheme.mutedDark : EchoTheme.mutedLight,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Match Code Hero Card ──
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF06090F) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(EchoTheme.rMd),
+                border: Border.all(
+                  color: EchoTheme.accent.withValues(alpha: 0.3),
+                  width: 1.5,
                 ),
               ),
-              const SizedBox(height: 4),
-
-              Text(
-                'Confirm the 2-digit code on your computer screen',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? EchoTheme.mutedDark : EchoTheme.mutedLight,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // ── Match Code Hero Card ──
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF06090F) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(EchoTheme.rMd),
-                  border: Border.all(
-                    color: EchoTheme.accent.withValues(alpha: 0.3),
-                    width: 1.5,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'MATCH CODE',
-                      style: TextStyle(
-                        fontFamily: 'JetBrains Mono',
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                        color: EchoTheme.dimLight,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.matchCode,
-                      style: const TextStyle(
-                        fontFamily: 'JetBrains Mono',
-                        fontSize: 42,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 4.0,
-                        color: EchoTheme.accent,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: EchoTheme.badSoft,
-                    borderRadius: BorderRadius.circular(EchoTheme.rSm),
-                  ),
-                  child: Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: EchoTheme.bad, fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-
-              // ── Actions ──
-              Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSigning ? null : widget.onDismiss,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(EchoTheme.rMd),
-                        ),
-                        side: BorderSide(
-                          color: isDark ? EchoTheme.borderDark : EchoTheme.borderStrongLight,
-                        ),
-                      ),
-                      child: Text(
-                        'Deny',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? EchoTheme.textDark : EchoTheme.textLight,
-                        ),
-                      ),
+                  const Text(
+                    'MATCH CODE',
+                    style: TextStyle(
+                      fontFamily: 'JetBrains Mono',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                      color: EchoTheme.dimLight,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _isSigning ? null : _handleApprove,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: EchoTheme.accent,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(EchoTheme.rMd),
-                        ),
-                      ),
-                      child: _isSigning
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.lock_open_rounded, size: 18, color: Colors.white),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Approve & Sign',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.matchCode,
+                    style: const TextStyle(
+                      fontFamily: 'JetBrains Mono',
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 4.0,
+                      color: EchoTheme.accent,
                     ),
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 18),
+
+            if (_errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: EchoTheme.badSoft,
+                  borderRadius: BorderRadius.circular(EchoTheme.rSm),
+                ),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: EchoTheme.bad, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 14),
             ],
+
+            // ── Actions ──
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: (_isSigning || _isDenying) ? null : _handleDeny,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(EchoTheme.rMd),
+                      ),
+                      side: BorderSide(
+                        color: isDark ? EchoTheme.borderDark : EchoTheme.borderStrongLight,
+                      ),
+                    ),
+                    child: _isDenying
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(EchoTheme.bad),
+                            ),
+                          )
+                        : Text(
+                            'Deny',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? EchoTheme.textDark : EchoTheme.textLight,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: (_isSigning || _isDenying) ? null : _handleApprove,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: EchoTheme.accent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(EchoTheme.rMd),
+                      ),
+                    ),
+                    child: _isSigning
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.lock_open_rounded, size: 18, color: Colors.white),
+                              SizedBox(width: 6),
+                              Text(
+                                'Approve & Sign',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

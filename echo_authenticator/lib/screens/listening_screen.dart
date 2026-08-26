@@ -9,6 +9,7 @@ import '../theme/echo_theme.dart';
 import '../widgets/approve_sheet.dart';
 import '../widgets/echo_wave_indicator.dart';
 import '../widgets/live_spectrum_widget.dart';
+import 'fullscreen_denied_screen.dart';
 import 'fullscreen_success_screen.dart';
 
 class ListeningScreen extends StatefulWidget {
@@ -149,6 +150,32 @@ class _ListeningScreenState extends State<ListeningScreen>
           onDismiss: () {
             HapticFeedback.lightImpact();
             Navigator.of(ctx).pop();
+          },
+          onDenied: () {
+            HapticFeedback.heavyImpact();
+            Navigator.of(ctx).pop();
+
+            // Trigger Full Screen Animated Denied Screen
+            Navigator.of(context).push(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => FullScreenDeniedScreen(
+                  username: creds.username,
+                  deviceName: creds.deviceName,
+                  onDismiss: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+              ),
+            );
+
+            setState(() {
+              _activityLog.insert(
+                0,
+                'Denied · Code $matchCode · ${TimeOfDay.now().format(context)}',
+              );
+            });
           },
           onApproved: () {
             HapticFeedback.heavyImpact();

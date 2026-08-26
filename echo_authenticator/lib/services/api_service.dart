@@ -124,4 +124,29 @@ class ApiService {
       return VerifyResult(success: false, error: e.toString());
     }
   }
+
+  /// Explicitly deny login challenge: informs backend to cancel session and alert laptop
+  static Future<bool> denyLogin({
+    required String serverUrl,
+    required String nonce,
+    String? deviceId,
+  }) async {
+    try {
+      final base = normalizeUrl(serverUrl);
+      final uri = Uri.parse('$base/api/login/deny');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'nonce': nonce,
+          if (deviceId != null) 'deviceId': deviceId,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      return response.statusCode == 200 && data['ok'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
 }

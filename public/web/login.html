@@ -488,6 +488,16 @@ function openSocket() {
       } else {
         fail('Could not complete sign-in. Please try again.');
       }
+    } else if (msg.type === 'denied') {
+      clearTimeout(txTimer);
+      clearTimeout(autoReplayTimer);
+      $('handshakeTitle').textContent = 'Sign-in Denied';
+      $('handshakeSub').textContent = 'The login request was rejected on your mobile phone.';
+      $('radarRing').classList.remove('connected');
+      $('radarSvg').innerHTML = '<use href="#i-alert"/>';
+      $('matchCard').style.borderColor = 'var(--bad)';
+      $('matchCaption').textContent = '✕ Rejected on mobile';
+      fail(msg.reason || 'Authentication was denied on your mobile device.');
     }
   };
   ws.onerror = () => {};
@@ -558,6 +568,8 @@ function retransmit() {
 
 function fail(msg) {
   clearTimeout(txTimer);
+  clearTimeout(autoReplayTimer);
+  $('handshakeStatus').style.display = 'block';
   $('handshakeStatus').className = 'status bad';
   $('handshakeStatus').textContent = msg;
 }
