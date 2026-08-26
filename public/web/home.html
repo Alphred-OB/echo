@@ -827,9 +827,8 @@
       <svg class="ic" style="width: 20px; height: 20px; margin: 0;" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
     </button>
     <span class="links" id="navLinks">
-      <a class="link" href="home.html#how">How it works</a>
+      <a class="link" href="home.html#whats-new">What's New</a>
       <a class="link" href="home.html#apps">Get App</a>
-      <a class="link" href="home.html#security">Security</a>
       <a class="link" href="login.html">Sign in</a>
       <a class="link primary" href="signup.html">Get started</a>
     </span>
@@ -1135,181 +1134,6 @@
     </div>
   </section>
 
-  <section class="sec rv" id="how">
-    <span class="kicker">How it works</span>
-    <h2>Four steps, zero typing</h2>
-    <p class="lead">Click a step to see it happen.</p>
-    <div class="card flow">
-      <svg id="scene" viewBox="0 0 640 250" role="img" aria-label="Diagram of the Echo sign-in flow">
-        <!-- Background Grid inside SVG for technical dashboard aesthetic -->
-        <defs>
-          <pattern id="svg-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(15, 23, 42, 0.02)" stroke-width="1"/>
-          </pattern>
-          <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
-            <feGaussianBlur stdDeviation="9" result="blur"/>
-          </filter>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#svg-grid)" rx="8"/>
-
-        <g id="gServer" class="ghost">
-          <rect x="270" y="18" width="100" height="58" rx="9" class="screen-fill" stroke="var(--border-strong)" stroke-width="1.6"/>
-          <line x1="282" y1="36" x2="318" y2="36" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
-          <line x1="282" y1="48" x2="334" y2="48" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
-          <use href="#i-lock" x="344" y="50" width="16" height="16" class="ic node-badge" style="color: var(--ok);"/>
-          <text x="320" y="94" font-size="12" fill="var(--dim)" text-anchor="middle">Echo server</text>
-        </g>
-        <g id="gLaptop" class="ghost">
-          <rect x="56" y="120" width="150" height="86" rx="8" class="screen-fill" stroke="var(--border-strong)" stroke-width="1.6"/>
-          <rect x="40" y="206" width="182" height="10" rx="5" fill="none" stroke="var(--border-strong)" stroke-width="1.6"/>
-          <text id="laptopMsg" x="131" y="160" font-size="11" fill="var(--dim)" text-anchor="middle">login.html</text>
-          <text id="laptopMsg2" x="131" y="178" font-size="11" fill="var(--dim)" text-anchor="middle"></text>
-          <text x="131" y="236" font-size="12" fill="var(--dim)" text-anchor="middle">your computer</text>
-        </g>
-        <g id="gPhone" class="ghost">
-          <rect x="468" y="116" width="64" height="104" rx="10" class="screen-fill" stroke="var(--border-strong)" stroke-width="1.6"/>
-          <line x1="492" y1="208" x2="508" y2="208" stroke="var(--border-strong)" stroke-width="1.6" stroke-linecap="round"/>
-          <g id="phoneListening" style="opacity:0; transition:opacity .45s">
-            <use href="#i-mic" x="488" y="128" width="24" height="24" class="ic" style="color: var(--accent);"/>
-            <rect class="eqbar" x="480" y="172" width="4" height="10" rx="2" fill="var(--accent)" style="transform-origin:482px 182px; animation-delay:0s"/>
-            <rect class="eqbar" x="492" y="166" width="4" height="16" rx="2" fill="var(--accent)" style="transform-origin:494px 182px; animation-delay:.15s"/>
-            <rect class="eqbar" x="504" y="170" width="4" height="12" rx="2" fill="var(--accent)" style="transform-origin:506px 182px; animation-delay:.3s"/>
-            <rect class="eqbar" x="516" y="168" width="4" height="14" rx="2" fill="var(--accent)" style="transform-origin:518px 182px; animation-delay:.45s"/>
-          </g>
-          <g id="phoneCheck" style="opacity:0; transition:opacity .45s">
-            <circle cx="500" cy="158" r="14" fill="none" stroke="var(--ok)" stroke-width="1.8"/>
-            <polyline points="493.5 158.5 498 163 507 153.5" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </g>
-          <text x="500" y="236" font-size="12" fill="var(--dim)" text-anchor="middle">your phone</text>
-        </g>
-        <g id="aReq" class="ghost" style="opacity:0">
-          <path id="reqPath" d="M 175 120 Q 215 70 262 52" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-dasharray="5 5"/>
-          <path d="M 262 52 l -9 -1 m 9 1 l -5 8" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/>
-          <circle r="3.5" fill="var(--accent)" class="signal-dot">
-            <animateMotion dur="1s" repeatCount="indefinite">
-              <mpath href="#reqPath" xlink:href="#reqPath"/>
-            </animateMotion>
-          </circle>
-        </g>
-        <circle class="glow-pulse" cx="216" cy="163" r="26" fill="var(--accent)" opacity="0" filter="url(#softGlow)"/>
-        <g class="arc" stroke="var(--accent)" fill="none" stroke-width="1.8">
-          <circle cx="216" cy="163" r="10"/>
-          <circle cx="216" cy="163" r="22" style="animation-delay:.35s"/>
-          <circle cx="216" cy="163" r="34" style="animation-delay:.7s"/>
-          <circle cx="216" cy="163" r="46" style="animation-delay:1.05s"/>
-        </g>
-        <g id="aSig" class="ghost" style="opacity:0">
-          <path id="sigPath" d="M 488 112 Q 440 60 380 46" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-dasharray="5 5"/>
-          <path d="M 380 46 l 9 -2 m -9 2 l 7 6" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round"/>
-          <circle r="3.5" fill="var(--ok)" class="signal-dot">
-            <animateMotion dur="1s" repeatCount="indefinite">
-              <mpath href="#sigPath" xlink:href="#sigPath"/>
-            </animateMotion>
-          </circle>
-        </g>
-        <g id="aOk" class="ghost" style="opacity:0">
-          <path id="okPath" d="M 268 76 Q 220 96 192 116" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-dasharray="5 5"/>
-          <path d="M 192 116 l 3 -9 m -3 9 l 9 2" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round"/>
-          <circle r="3.5" fill="var(--ok)" class="signal-dot">
-            <animateMotion dur="1s" repeatCount="indefinite">
-              <mpath href="#okPath" xlink:href="#okPath"/>
-            </animateMotion>
-          </circle>
-        </g>
-      </svg>
-      <div class="stepbtns" id="stepBtns">
-        <button class="on" onclick="goStep(0,true)">1 · Request</button>
-        <button onclick="goStep(1,true)">2 · Sound</button>
-        <button onclick="goStep(2,true)">3 · Approve</button>
-        <button onclick="goStep(3,true)">4 · Signed in</button>
-      </div>
-      <div class="step-progress" aria-hidden="true"><span id="stepProgressBar"></span></div>
-      <p id="stepCaption"></p>
-    </div>
-  </section>
-
-  <section class="sec rv" id="prior-art">
-    <span class="kicker">Related work</span>
-    <h2>Sound-based login isn't new. Here's what we changed.</h2>
-    <p class="lead">Prior art like SlickLogin (2013) and academic ambient-noise schemes proved the concept. Echo adds the piece they didn't have.</p>
-    <div class="prior-art-strip">
-      <span class="pa-point"><svg class="ic"><use href="#i-shield-check"/></svg> <b>Sound carries the code, not the trust</b> — the real proof is an on-device P-256 signature</span>
-      <span class="pa-point"><svg class="ic"><use href="#i-lock"/></svg> <b>Nothing to install</b> — WebCrypto key management, straight from the browser</span>
-    </div>
-  </section>
-
-  <!-- Split FAQ Section (Matching Reference Screenshot Design) -->
-  <section class="sec rv" id="security">
-    <div class="faq-container-grid">
-      <!-- Left Column: Pill, Title, and Support Box -->
-      <div class="faq-left-col">
-        <div class="faq-pill-tag">
-          <span class="faq-dot">●</span> Echo Security & Support
-        </div>
-        <h2 class="faq-main-heading">Frequently asked<br>questions</h2>
-
-        <div class="faq-support-card">
-          <h3>Still have questions?</h3>
-          <p>Can't find the answer to your question? Send us an email and we'll get back to you as soon as possible!</p>
-          <button class="faq-contact-btn" onclick="location.href='mailto:support@echo-auth.com'">Send email</button>
-        </div>
-      </div>
-
-      <!-- Right Column: Accordion Cards Stack -->
-      <div class="faq-right-col">
-        <details class="faq-accordion-item" open>
-          <summary class="faq-question">
-            <span>How does Echo sign me in without typing passwords?</span>
-            <span class="faq-icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
-          </summary>
-          <div class="faq-answer">
-            Echo plays a single-use sound signal from your computer speaker. Your personal phone listens through its microphone, verifies the identity code, and signs you in securely with a single tap.
-          </div>
-        </details>
-
-        <details class="faq-accordion-item">
-          <summary class="faq-question">
-            <span>What if my phone battery dies or I don't have it nearby?</span>
-            <span class="faq-icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
-          </summary>
-          <div class="faq-answer">
-            You can always fall back to a one-time magic sign-in link sent directly to your registered email address. It expires after 15 minutes and can only be used once.
-          </div>
-        </details>
-
-        <details class="faq-accordion-item">
-          <summary class="faq-question">
-            <span>Can someone record the sound and play it back to log in?</span>
-            <span class="faq-icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
-          </summary>
-          <div class="faq-answer">
-            No. Every sound code is uniquely generated for that single login attempt, automatically expires after 30 seconds, and is deleted from the server the instant it is used.
-          </div>
-        </details>
-
-        <details class="faq-accordion-item">
-          <summary class="faq-question">
-            <span>Do I need to install an app or browser extension?</span>
-            <span class="faq-icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
-          </summary>
-          <div class="faq-answer">
-            You can choose whichever option fits your workflow best. Download our dedicated Android app for native biometric fingerprint lock and tactile vibrations, or launch the instant Web PWA directly inside any modern browser (Safari, Chrome, Edge) with zero installation required.
-          </div>
-        </details>
-
-        <details class="faq-accordion-item">
-          <summary class="faq-question">
-            <span>Is the sound signal audible or disruptive to people around me?</span>
-            <span class="faq-icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
-          </summary>
-          <div class="faq-answer">
-            By default, Echo uses near-ultrasonic frequencies above 17 kHz that human ears cannot hear. If your device speaker prefers audible frequencies, you can also toggle audible mode anytime.
-          </div>
-        </details>
-      </div>
-    </div>
-  </section>
-
   <!-- ── Mobile Authenticator Showcase & Download Section ── -->
   <section class="sec rv" id="apps" style="text-align: center;">
     <span class="kicker">Mobile Authenticator</span>
@@ -1380,8 +1204,8 @@
       <div class="footer-col">
         <h4>Navigation</h4>
         <ul>
-          <li><a href="home.html#how">How it works</a></li>
-          <li><a href="home.html#security">Security & FAQ</a></li>
+          <li><a href="home.html#whats-new">What's New</a></li>
+          <li><a href="home.html#apps">Get App</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -1573,71 +1397,6 @@ async function playDemo() {
   src.start(0);
 }
 drawSpec();
-
-/* ---------- how-it-works stepper ---------- */
-const CAPTIONS = [
-  'Step 1: Your computer asks the server to start a sign-in. The server creates a secret random code that only works once and expires after 30 seconds.',
-  'Step 2: Your computer plays this secret code out loud using high-pitched sound waves that humans cannot hear. Your phone listens through its microphone and decodes the secret code instantly.',
-  'Step 3: Your phone checks with the server to make sure the code is valid. Once you approve on your screen (using your fingerprint or PIN), your phone signs the code using a secure key saved inside your phone.',
-  'Step 4: Your phone sends this secure signature back to the server. The server verifies it, deletes the one-time code so it can never be used again, and logs your computer in automatically.'
-];
-
-let step = 0, autoTimer = null, pauseTimer = null;
-const STEP_MS = 8000; // duration for thorough reading
-
-function restartProgressBar(duration) {
-  const bar = $('stepProgressBar');
-  if (!bar) return;
-  bar.classList.remove('run');
-  bar.style.animationDuration = '';
-  void bar.offsetWidth; // force reflow so the animation restarts cleanly
-  bar.style.animationDuration = duration + 'ms';
-  bar.classList.add('run');
-}
-
-function stopProgressBar() {
-  const bar = $('stepProgressBar');
-  if (!bar) return;
-  bar.classList.remove('run');
-}
-
-function startAuto(firstDelay) {
-  clearTimeout(autoTimer);
-  const delay = firstDelay != null ? firstDelay : STEP_MS;
-  restartProgressBar(delay);
-  autoTimer = setTimeout(function tick() {
-    goStep((step + 1) % 4);
-    restartProgressBar(STEP_MS);
-    autoTimer = setTimeout(tick, STEP_MS);
-  }, delay);
-}
-
-function goStep(n, manual) {
-  step = n;
-  $('scene').setAttribute('class', n === 1 ? 's2' : 's' + (n + 1));
-  const set = (id, on) => $(id).setAttribute('class', on ? 'live' : 'ghost');
-  set('gLaptop', n === 0 || n === 1 || n === 3);
-  set('gServer', n === 0 || n === 2 || n === 3);
-  set('gPhone', n === 1 || n === 2);
-  $('aReq').style.opacity = n === 0 ? 1 : 0;
-  $('aSig').style.opacity = n === 2 ? 1 : 0;
-  $('aOk').style.opacity = n === 3 ? 1 : 0;
-  $('phoneListening').style.opacity = n === 1 ? 1 : 0;
-  $('phoneCheck').style.opacity = n >= 2 ? 1 : 0;
-  $('laptopMsg').textContent = ['requesting code…', 'playing sound', 'waiting…', 'signed in'][n];
-  $('laptopMsg2').textContent = n === 3 ? 'welcome back' : '';
-  $('stepCaption').textContent = CAPTIONS[n];
-  [...$('stepBtns').children].forEach((b, i) => b.className = i === n ? 'on' : '');
-  if (manual) {
-    clearTimeout(autoTimer); autoTimer = null;
-    stopProgressBar();
-    clearTimeout(pauseTimer);
-    pauseTimer = setTimeout(startAuto, 12000);
-  }
-}
-
-goStep(0);
-startAuto();
 
 /* ---------- scroll reveal ---------- */
 const io = new IntersectionObserver(es => es.forEach(e => {
