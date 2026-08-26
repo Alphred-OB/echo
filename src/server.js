@@ -458,9 +458,10 @@ app.post('/api/device/token', (req, res) => {
   const user = currentUser(req);
   if (!user) return res.status(401).json({ error: 'not logged in' });
   const token = rand(16);
-  db.prepare('INSERT INTO enroll_tokens (token, username, expires_at, created_at) VALUES (?, ?, ?, ?)')
-    .run(token, user.username, now() + ENROLL_TTL_MS, now());
-  res.json({ ok: true, enrollToken: token, ttlMs: ENROLL_TTL_MS });
+  const pairCode = String(Math.floor(100000 + Math.random() * 900000));
+  db.prepare('INSERT INTO enroll_tokens (token, code, username, expires_at, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(token, pairCode, user.username, now() + ENROLL_TTL_MS, now());
+  res.json({ ok: true, enrollToken: token, pairCode, ttlMs: ENROLL_TTL_MS });
 });
 
 // Remove a device from the account; the device can no longer authenticate

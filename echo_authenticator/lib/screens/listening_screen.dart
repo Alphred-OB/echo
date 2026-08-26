@@ -9,15 +9,16 @@ import '../theme/echo_theme.dart';
 import '../widgets/approve_sheet.dart';
 import '../widgets/echo_wave_indicator.dart';
 import '../widgets/live_spectrum_widget.dart';
+import 'fullscreen_success_screen.dart';
 
 class ListeningScreen extends StatefulWidget {
-  final DeviceCredentials credentials;
-  final VoidCallback onUnpaired;
+  final DeviceCredentials? credentials;
+  final VoidCallback? onUnpair;
 
   const ListeningScreen({
     super.key,
-    required this.credentials,
-    required this.onUnpaired,
+    this.credentials,
+    this.onUnpair,
   });
 
   @override
@@ -33,6 +34,7 @@ class _ListeningScreenState extends State<ListeningScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
+  DeviceCredentials? _creds;
   List<double> _currentBins = List.filled(36, 0.04);
   bool _isListening = false;
   bool _hasUltrasound = false;
@@ -44,6 +46,12 @@ class _ListeningScreenState extends State<ListeningScreen>
   @override
   void initState() {
     super.initState();
+    _creds = widget.credentials;
+    if (_creds == null) {
+      StorageService.getCredentials().then((c) {
+        if (mounted) setState(() => _creds = c);
+      });
+    }
 
     _pulseController = AnimationController(
       vsync: this,
@@ -97,6 +105,9 @@ class _ListeningScreenState extends State<ListeningScreen>
   }
 
   Future<void> _handleNonceReceived(String nonce) async {
+    final creds = _creds ?? widget.credentials;
+    if (creds == null) return;
+
     // 📳 Tactile Ultrasound Capture Bump
     HapticFeedback.heavyImpact();
 
@@ -108,9 +119,9 @@ class _ListeningScreenState extends State<ListeningScreen>
 
     // 1. Silent pre-flight check
     final isMine = await ApiService.checkNonce(
-      serverUrl: widget.credentials.serverUrl,
+      serverUrl: creds.serverUrl,
       nonce: nonce,
-      deviceId: widget.credentials.deviceId,
+      deviceId: creds.deviceId,
     );
 
     if (!isMine) {
@@ -134,7 +145,7 @@ class _ListeningScreenState extends State<ListeningScreen>
         builder: (ctx) => ApproveSheet(
           nonce: nonce,
           matchCode: matchCode,
-          credentials: widget.credentials,
+          credentials: creds,
           onDismiss: () {
             HapticFeedback.lightImpact();
             Navigator.of(ctx).pop();
@@ -142,6 +153,22 @@ class _ListeningScreenState extends State<ListeningScreen>
           onApproved: () {
             HapticFeedback.heavyImpact();
             Navigator.of(ctx).pop();
+
+            // Trigger Full Screen Animated Celebration Screen
+            Navigator.of(context).push(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => FullScreenSuccessScreen(
+                  username: creds.username,
+                  deviceName: creds.deviceName,
+                  onDismiss: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+              ),
+            );
+
             setState(() {
               _activityLog.insert(
                 0,
@@ -155,13 +182,16 @@ class _ListeningScreenState extends State<ListeningScreen>
   }
 
   void _showUnpairDialog() {
+    final creds = _creds ?? widget.credentials;
+    if (creds == null) return;
+
     HapticFeedback.lightImpact();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Unpair this device?'),
-        content: const Text(
-          'This will remove your security key from this phone. You will need to re-scan the QR code to use it again.',
+        title: const Text('Remove account key?'),
+        content: Text(
+          'This will remove ${creds.username} (${creds.deviceName}) from this device.',
         ),
         actions: [
           TextButton(
@@ -175,11 +205,15 @@ class _ListeningScreenState extends State<ListeningScreen>
             onPressed: () async {
               HapticFeedback.heavyImpact();
               Navigator.of(ctx).pop();
-              await StorageService.clear();
-              widget.onUnpaired();
+              await StorageService.removeAccount(creds.deviceId);
+              if (widget.onUnpair != null) {
+                widget.onUnpair!();
+              } else {
+                Navigator.of(context).pop();
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: EchoTheme.bad),
-            child: const Text('Unpair'),
+            child: const Text('Remove'),
           ),
         ],
       ),
@@ -252,7 +286,7 @@ class _ListeningScreenState extends State<ListeningScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      widget.credentials.username,
+                      _creds?.username ?? widget.credentials?.username ?? 'Echo',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -260,7 +294,7 @@ class _ListeningScreenState extends State<ListeningScreen>
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '· ${widget.credentials.deviceName}',
+                      '· ${_creds?.deviceName ?? widget.credentials?.deviceName ?? 'Phone Key'}',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? EchoTheme.mutedDark : EchoTheme.mutedLight,

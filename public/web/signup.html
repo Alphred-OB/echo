@@ -194,10 +194,15 @@
         <div class="qr-card" id="qrBox"></div>
       </div>
 
-      <!-- 6-Digit Manual Pairing Code -->
-      <div style="margin: 12px auto 14px; max-width: 260px; padding: 10px 14px; background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; text-align: center;">
-        <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Or enter code on your phone</div>
-        <div id="pairCodeDisplay" style="font-size: 24px; font-weight: 900; font-family: 'JetBrains Mono', monospace; letter-spacing: 4px; color: var(--accent);">··· ···</div>
+      <!-- Toggleable 6-Digit Manual Pairing Code (Hidden by default) -->
+      <div style="text-align: center; margin: 12px auto 14px;">
+        <button type="button" id="btnToggleCode" onclick="togglePairCode()" style="background: none; border: none; color: var(--accent); font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px;">
+          Can't scan QR code? Show 6-digit PIN
+        </button>
+        <div id="pairCodeContainer" style="display: none; margin-top: 10px; max-width: 260px; margin-left: auto; margin-right: auto; padding: 10px 14px; background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Enter code on your phone</div>
+          <div id="pairCodeDisplay" style="font-size: 24px; font-weight: 900; font-family: 'JetBrains Mono', monospace; letter-spacing: 4px; color: var(--accent);">··· ···</div>
+        </div>
       </div>
 
       <!-- Clean Live Status Indicator -->
@@ -385,11 +390,25 @@ function copyEnrollLink() {
   });
 }
 
+function togglePairCode() {
+  const c = $('pairCodeContainer');
+  const btn = $('btnToggleCode');
+  if (c.style.display === 'none') {
+    c.style.display = 'block';
+    btn.textContent = 'Hide 6-digit PIN';
+  } else {
+    c.style.display = 'none';
+    btn.textContent = "Can't scan QR code? Show 6-digit PIN";
+  }
+}
+
 function backToStep1() {
   clearInterval(pollTimer);
   $('step2').style.display = 'none';
   $('step1').style.display = 'block';
   $('btnNext').disabled = false;
+  if ($('pairCodeContainer')) $('pairCodeContainer').style.display = 'none';
+  if ($('btnToggleCode')) $('btnToggleCode').textContent = "Can't scan QR code? Show 6-digit PIN";
 }
 </script>
 </body>

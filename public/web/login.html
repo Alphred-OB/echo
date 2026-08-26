@@ -443,10 +443,16 @@ async function startLogin() {
   transmitNonce();
 }
 
+let replayCount = 0;
+const MAX_REPLAYS = 3;
+let autoReplayTimer = null;
+
 function cancelLogin() {
   clearTimeout(txTimer);
+  clearTimeout(autoReplayTimer);
   if (ws) { ws.close(); ws = null; }
   session = null;
+  replayCount = 0;
   $('btnContinue').disabled = false;
   $('handshakeState').style.display = 'none';
   $('formState').style.display = 'block';
@@ -462,6 +468,7 @@ function openSocket() {
     const msg = JSON.parse(ev.data);
     if (msg.type === 'authenticated') {
       clearTimeout(txTimer);
+      clearTimeout(autoReplayTimer);
       const r = await fetch(API_BASE + '/api/session/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -488,9 +495,17 @@ function openSocket() {
 
 function transmitNonce() {
   if (!session) return;
+  clearTimeout(autoReplayTimer);
 
-  $('handshakeTitle').textContent = 'Transmitting sound…';
-  $('handshakeSub').textContent = 'Playing ultrasonic handshake';
+  replayCount++;
+  $('handshakeTitle').textContent = `Playing Signal (${replayCount}/${MAX_REPLAYS})`;
+  $('handshakeSub').textContent = 'Hold your phone near the screen';
+  
+  if (replayCount > 1) {
+    $('handshakeStatus').className = 'status';
+    $('handshakeStatus').style.display = 'block';
+    $('handshakeStatus').textContent = `⚠️ Retrying sound transmission (${replayCount} of ${MAX_REPLAYS})...`;
+  }
 
   // Default to ULTRASOUND_NORMAL (18–20 kHz)
   const waveform = ggwave.encode(instance, 'E1:' + session.nonce, ggwave.ProtocolId.GGWAVE_PROTOCOL_ULTRASOUND_NORMAL, 25);
@@ -506,15 +521,27 @@ function transmitNonce() {
     if ($('radarRing').classList.contains('connected')) return;
     $('handshakeTitle').textContent = 'Awaiting Approval';
     $('handshakeSub').textContent = 'Tap Approve on your phone to sign in';
-    $('handshakeStatus').textContent = '';
 
-    clearTimeout(txTimer);
-    const remainingTime = Math.max(5000, session.ttlMs - (Date.now() - startedAt));
-    txTimer = setTimeout(() => {
-      if (!$('radarRing').classList.contains('connected')) {
-        fail('Session timed out. Tap "Replay Sound" or cancel to try again.');
-      }
-    }, remainingTime);
+    if (replayCount < MAX_REPLAYS) {
+      $('handshakeStatus').className = 'status';
+      $('handshakeStatus').style.display = 'block';
+      $('handshakeStatus').textContent = `Auto-retrying in a few seconds (${replayCount}/${MAX_REPLAYS}). Keep phone nearby.`;
+      
+      autoReplayTimer = setTimeout(() => {
+        if (session && !$('radarRing').classList.contains('connected')) {
+          transmitNonce();
+        }
+      }, 4500);
+    } else {
+      $('handshakeStatus').textContent = '';
+      clearTimeout(txTimer);
+      const remainingTime = Math.max(5000, session.ttlMs - (Date.now() - startedAt));
+      txTimer = setTimeout(() => {
+        if (!$('radarRing').classList.contains('connected')) {
+          fail('Session timed out. Tap "Replay Sound" or cancel to try again.');
+        }
+      }, remainingTime);
+    }
   };
 
   src.start(0);
@@ -523,6 +550,8 @@ function transmitNonce() {
 function retransmit() {
   if (session) {
     clearTimeout(txTimer);
+    clearTimeout(autoReplayTimer);
+    replayCount = 0;
     transmitNonce();
   }
 }

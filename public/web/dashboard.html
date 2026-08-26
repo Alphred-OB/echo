@@ -302,19 +302,29 @@
   <!-- Main grid -->
   <div class="grid">
 
-    <!-- Devices card -->
+    <!-- Security Keys card -->
     <div class="card">
       <div class="card-head">
-        <h2><svg class="ic"><use href="#i-phone"/></svg> Devices</h2>
-        <button class="btn small ghost" onclick="addDevice()"><svg class="ic"><use href="#i-plus"/></svg> Add device</button>
+        <h2><svg class="ic"><use href="#i-phone"/></svg> Security Keys</h2>
+        <button class="btn small ghost" onclick="addDevice()"><svg class="ic"><use href="#i-plus"/></svg> Add Key</button>
       </div>
-      <p class="sub">Phones that can approve your sign-ins. Changed phones? Add the new one, then revoke the old.</p>
+      <p class="sub">Authorized phones that approve sign-ins for this account.</p>
       <div id="deviceList"></div>
-      <div id="addDeviceBox" style="display:none">
-        <div class="divider">scan with the new phone</div>
+      <div id="addDeviceBox" style="display:none; margin-top: 16px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); text-align: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <strong style="font-size: 14px;">Pair New Phone Key</strong>
+          <button type="button" onclick="$('addDeviceBox').style.display='none'; clearInterval(pollTimer);" style="background: none; border: none; font-size: 16px; cursor: pointer; color: var(--muted);">✕</button>
+        </div>
         <div class="qr" id="deviceQr"></div>
-        <div class="center"><span class="pill mono" id="deviceLink"></span></div>
-        <div class="status" id="addStatus" style="animation: blink 1.5s infinite">Waiting for the new phone… this link expires in 10 minutes.</div>
+        <div style="margin: 12px auto 8px;">
+          <button type="button" id="btnDashToggleCode" onclick="toggleDashPairCode()" style="background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: underline;">
+            Can't scan QR code? Show 6-digit PIN
+          </button>
+          <div id="dashPairCodeContainer" style="display: none; margin-top: 8px;">
+            <span class="pill mono" id="devicePairCode" style="font-size: 20px; font-weight: 900; letter-spacing: 4px; color: var(--accent); background: #fff; border: 1px dashed var(--accent);">··· ···</span>
+          </div>
+        </div>
+        <div class="status" id="addStatus" style="font-size: 12px; margin-top: 10px;">Waiting for phone… expires in 10 minutes.</div>
       </div>
     </div>
 
@@ -480,7 +490,12 @@ async function addDevice() {
   qr.addData(url);
   qr.make();
   $('deviceQr').innerHTML = qr.createSvgTag({ scalable: true, margin: 2 });
+  if ($('devicePairCode') && data.pairCode) {
+    $('devicePairCode').textContent = `${data.pairCode.slice(0,3)} ${data.pairCode.slice(3)}`;
+  }
   $('deviceLink').textContent = url.replace(/^https?:\/\//, '');
+  if ($('dashPairCodeContainer')) $('dashPairCodeContainer').style.display = 'none';
+  if ($('btnDashToggleCode')) $('btnDashToggleCode').textContent = "Can't scan QR code? Show 6-digit PIN";
   $('addDeviceBox').style.display = '';
   clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
@@ -489,7 +504,20 @@ async function addDevice() {
       clearInterval(pollTimer);
       $('addDeviceBox').style.display = 'none';
       load();
+    }
   }, 2000);
+}
+
+function toggleDashPairCode() {
+  const c = $('dashPairCodeContainer');
+  const btn = $('btnDashToggleCode');
+  if (c.style.display === 'none') {
+    c.style.display = 'block';
+    btn.textContent = 'Hide 6-digit PIN';
+  } else {
+    c.style.display = 'none';
+    btn.textContent = "Can't scan QR code? Show 6-digit PIN";
+  }
 }
 </script>
 </div>

@@ -541,6 +541,228 @@
     .faq-container-grid { grid-template-columns: 1fr; gap: 32px; }
   }
 
+  /* Comparison Table Styles */
+  .comparison-table-wrap {
+    overflow-x: auto;
+    margin-top: 32px;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.04);
+  }
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 640px;
+  }
+  .compare-table th {
+    padding: 16px 20px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: rgba(37, 99, 235, 0.02);
+  }
+  .compare-table th.highlight-col {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .compare-table td {
+    padding: 18px 20px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .compare-table tr:last-child td {
+    border-bottom: none;
+  }
+  .compare-table td.feature-title {
+    font-weight: 800;
+    color: var(--text);
+    width: 25%;
+  }
+  .compare-table td.old-val {
+    color: var(--muted);
+    width: 35%;
+  }
+  .compare-table td.new-val {
+    color: var(--text);
+    font-weight: 600;
+    background: rgba(37, 99, 235, 0.018);
+    width: 40%;
+  }
+  /* Category Row & Red/Green Badges */
+  .compare-table tr.category-row td {
+    background: rgba(37, 99, 235, 0.06);
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .mark-red {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 11px;
+    font-weight: 800;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .mark-green {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #dcfce7;
+    color: #16a34a;
+    font-size: 11px;
+    font-weight: 800;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .compare-cell-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* Alternating Left-Right Timeline Showcase */
+  .timeline-container {
+    position: relative;
+    max-width: 1120px;
+    margin: 64px auto 32px;
+    padding: 20px 0;
+  }
+  .timeline-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    background: linear-gradient(to bottom, rgba(37,99,235,0.08), rgba(37,99,235,0.35) 15%, rgba(37,99,235,0.35) 85%, rgba(37,99,235,0.08));
+    transform: translateX(-50%);
+  }
+  .timeline-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 96px;
+    position: relative;
+    gap: 32px;
+  }
+  .timeline-item:last-child {
+    margin-bottom: 24px;
+  }
+  .timeline-node {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 6px var(--bg), 0 0 16px rgba(37,99,235,0.4);
+    z-index: 2;
+  }
+  .timeline-content {
+    width: 42%;
+  }
+  .timeline-content.text-block {
+    text-align: left;
+    padding: 8px 12px;
+  }
+  .timeline-tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 4px 12px;
+    border-radius: 99px;
+    margin-bottom: 12px;
+  }
+  .timeline-content h3 {
+    font-size: 1.65rem;
+    font-weight: 850;
+    margin: 0 0 12px;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    line-height: 1.25;
+  }
+  .timeline-content p {
+    font-size: 1.02rem;
+    color: var(--muted);
+    line-height: 1.65;
+    margin: 0;
+  }
+  .timeline-media {
+    width: 52%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .timeline-phone-img {
+    width: 100%;
+    max-width: 560px;
+    height: auto;
+    border-radius: 18px;
+    display: block;
+    background: transparent;
+    filter: drop-shadow(0 14px 32px rgba(15, 23, 42, 0.08));
+    transition: transform 0.35s ease, filter 0.35s ease;
+  }
+  .timeline-phone-img:hover {
+    transform: translateY(-4px) scale(1.015);
+    filter: drop-shadow(0 20px 42px rgba(37, 99, 235, 0.18));
+  }
+  @media (max-width: 860px) {
+    .timeline-container::before {
+      left: 14px;
+    }
+    .timeline-node {
+      left: 14px;
+      top: 32px;
+      transform: none;
+      width: 14px;
+      height: 14px;
+    }
+    .timeline-item {
+      flex-direction: column !important;
+      align-items: flex-start;
+      padding-left: 56px;
+      margin-bottom: 56px;
+      gap: 20px;
+    }
+    .timeline-content, .timeline-media {
+      width: 100%;
+    }
+    .timeline-media {
+      justify-content: flex-start;
+    }
+    .timeline-phone-img {
+      max-width: 100%;
+    }
+  }
+
   /* Bottom CTA banner */
   .bottom-cta { text-align: center; padding: 60px 40px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.03) 0%, rgba(255, 255, 255, 0) 100%); border: 1px solid var(--border); border-radius: var(--r-lg); margin-top: 80px; position: relative; overflow: hidden; }
   .bottom-cta::before { content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%; background: var(--accent); filter: blur(100px); opacity: 0.1; top: -50px; left: -50px; pointer-events: none; }
@@ -677,30 +899,166 @@
   </header>
 
   <section class="sec rv" id="whats-new">
-    <span class="kicker">What's new</span>
-    <h2>Recently shipped</h2>
-    <p class="lead">Echo keeps evolving. Here's what's landed most recently.</p>
-    <div class="whats-new-grid">
-      <div class="wn-card">
-        <div class="wn-icon"><svg class="ic"><use href="#i-shield"/></svg></div>
-        <h4>Native phone app</h4>
-        <p>A dedicated Echo Key app for Android — faster listening, richer haptics, and a home-screen icon instead of a browser tab.</p>
-      </div>
-      <div class="wn-card">
-        <div class="wn-icon"><svg class="ic"><use href="#i-volume"/></svg></div>
-        <h4>Live handshake confirmation</h4>
-        <p>Watch the connection lock in with a real-time animation the instant your phone and computer agree on the same code.</p>
-      </div>
-      <div class="wn-card">
-        <div class="wn-icon"><svg class="ic"><use href="#i-mail"/></svg></div>
-        <h4>Email link recovery</h4>
-        <p>Lost your phone? A single-use magic link sent to your inbox gets you back in — no backup password to remember or leak.</p>
-      </div>
-      <div class="wn-card">
-        <div class="wn-icon"><svg class="ic"><use href="#i-moon"/></svg></div>
-        <h4>Dark mode</h4>
-        <p>A full dark theme across the site and dashboard, matched to your system preference or toggled manually.</p>
-      </div>
+    <span class="kicker">Version 2.0 Highlights</span>
+    <h2>What's new & improved</h2>
+    <p class="lead">We completely upgraded Echo to make signing in faster, simpler, and more secure than ever.</p>
+    
+    <div class="comparison-table-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Old Version</th>
+            <th class="highlight-col">New Improved Version</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Category 1: UI / UX & Mobile Experience -->
+          <tr class="category-row">
+            <td colspan="3">1. UI / UX & Mobile Experience</td>
+          </tr>
+          <tr>
+            <td class="feature-title">Dedicated Mobile App</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Only worked inside a web browser tab.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>Dedicated Android app on your phone home screen or instant Web PWA.</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-title">Multiple Accounts</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Only 1 account allowed on your phone.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>Google Authenticator-style dashboard to connect and switch between all personal and work accounts.</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-title">6-Digit Pairing Codes</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Had to copy and paste long, confusing web addresses.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>Fast 6-digit PIN boxes with individual character cells and clean QR code scanning.</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-title">Theme Switching</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Only one fixed screen appearance.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>One-tap switch between pure white Light mode and deep navy Dark mode across the app and site.</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-title">Automatic Sound Play</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Had to manually press the replay button if the phone missed the sound.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>Computer automatically retries transmitting the sound 3 times with a helpful warning notice.</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-title">Unified Branding & Icon</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Generic default placeholder icon.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>Matching official Echo 6-wave soundmark across app launcher, icons, and website.</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-title">Sign-In Celebration</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Small popup that closed abruptly with no clear confirmation.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>Full-screen animated green checkmark with phone vibration confirming you are signed in.</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Category 2: Security & Protection -->
+          <tr class="category-row">
+            <td colspan="3">2. Security & Protection</td>
+          </tr>
+          <tr>
+            <td class="feature-title">Biometric App Lock</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Anyone holding your phone could open the app and access keys.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>Automatically asks for your Fingerprint, Face ID, or phone PIN the moment the app opens.</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-title">Lost Phone Recovery</td>
+            <td class="old-val">
+              <div class="compare-cell-content">
+                <span class="mark-red">✕</span>
+                <span>Losing your phone meant getting permanently locked out.</span>
+              </div>
+            </td>
+            <td class="new-val">
+              <div class="compare-cell-content">
+                <span class="mark-green">✓</span>
+                <span>Sign in on your computer with a secure 1-click magic email link and connect a new phone.</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -896,12 +1254,70 @@
         </details>
       </div>
     </div>
-  <!-- ── Mobile Authenticator Download Section ── -->
+  </section>
+
+  <!-- ── Mobile Authenticator Showcase & Download Section ── -->
   <section class="sec rv" id="apps" style="text-align: center;">
     <span class="kicker">Mobile Authenticator</span>
     <h2>Turn your phone into a physical security key</h2>
-    <p class="lead">Install our native Android APK for hardware haptics or launch the instant Web PWA directly in your browser.</p>
+    <p class="lead">Built with modern hardware biometric protection, live acoustic listening, and multi-account management.</p>
 
+    <!-- Alternating Left-Right Timeline Showcase -->
+    <div class="timeline-container">
+      <!-- Feature 1: Text Left, Image Right -->
+      <div class="timeline-item">
+        <div class="timeline-content text-block">
+          <span class="timeline-tag">Biometric Protection</span>
+          <h3>Biometric Security Lock</h3>
+          <p>Before accessing your cryptographic security keys, Echo verifies your identity using your phone's Fingerprint, Face ID, or device passcode.</p>
+        </div>
+        <div class="timeline-node"></div>
+        <div class="timeline-media">
+          <img class="timeline-phone-img" src="../images/biometric.webp" alt="Echo Biometric Lock Screen" loading="lazy">
+        </div>
+      </div>
+
+      <!-- Feature 2: Image Left, Text Right -->
+      <div class="timeline-item">
+        <div class="timeline-media">
+          <img class="timeline-phone-img" src="../images/app main interface.webp" alt="Echo Live Sound Listener" loading="lazy">
+        </div>
+        <div class="timeline-node"></div>
+        <div class="timeline-content text-block">
+          <span class="timeline-tag">Acoustic Signal</span>
+          <h3>Live Acoustic Listening</h3>
+          <p>Your phone microphone listens for the silent ultrasonic login signal played by your computer screen with real-time soundwave visualization.</p>
+        </div>
+      </div>
+
+      <!-- Feature 3: Text Left, Image Right -->
+      <div class="timeline-item">
+        <div class="timeline-content text-block">
+          <span class="timeline-tag">Multi-Account Hub</span>
+          <h3>Connected Accounts</h3>
+          <p>View, manage, and switch between all your personal and work accounts in one unified dashboard — just like Google Authenticator.</p>
+        </div>
+        <div class="timeline-node"></div>
+        <div class="timeline-media">
+          <img class="timeline-phone-img" src="../images/connected sites interface.webp" alt="Echo Connected Accounts Dashboard" loading="lazy">
+        </div>
+      </div>
+
+      <!-- Feature 4: Image Left, Text Right -->
+      <div class="timeline-item">
+        <div class="timeline-media">
+          <img class="timeline-phone-img" src="../images/app.webp" alt="Echo Authenticator App Design" loading="lazy">
+        </div>
+        <div class="timeline-node"></div>
+        <div class="timeline-content text-block">
+          <span class="timeline-tag">Modern Experience</span>
+          <h3>Fast & Clean Design</h3>
+          <p>Enjoy one-tap Light and Dark theme switching, tactile phone vibrations, and instant 6-digit PIN pairing without clutter.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download Options Row -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 780px; margin: 32px auto 0; text-align: left;">
       <!-- Native Android APK Card -->
       <div class="card" style="padding: 26px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; background: var(--surface);">
